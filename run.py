@@ -24,5 +24,5 @@ async def main():
     await dp.start_polling(*bots, polling_timeout=30)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())

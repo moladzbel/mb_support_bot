@@ -6,7 +6,7 @@ Open Source support bot for Telegram based on aiogram. Not ready for production 
 ## Quick start
 
 - copy `.env.example` file to `.env`
-- fill the variables in `.env` file. If you only need one bot, leave the values just for `BOT_ONE`
+- fill the variables in `.env` file
 - create venv: `python3 -m venv .venv`
 - activate it: `. .venv/bin/activate`
 - install dependencies: `pip install -r requirements.txt`

@@ -42,7 +42,7 @@ async def main() -> None:
             token, cfg = read_bot_config(bot_name)
             bots.append(SupportBot(token, cfg, logger))
     
-    logger.info(f'Started bots: %s', ', '.join([b.name for b in bots]))
+    logger.info('Started bots: %s', ', '.join([b.name for b in bots]))
     await dp.start_polling(*bots, polling_timeout=30)
 
 

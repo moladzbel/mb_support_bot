@@ -8,7 +8,7 @@ from .db import MemoryDB
 
 
 BOT_CFG_VARS = (
-    'internal_group_id', 'hello_msg',
+    'admin_group_id', 'hello_msg',
 )
 
 

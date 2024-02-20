@@ -2,7 +2,9 @@ import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.filters import Command
 
-from .filters import NewChatMembersFilter, ACommandFilter, PrivateChatFilter
+from .filters import (
+    ACommandFilter, NewChatMembersFilter, PrivateChatFilter, ReplyToBotInGroupForwardedFilter,
+)
 from .utils import make_user_info
 
 
@@ -29,10 +31,10 @@ async def added_to_group(msg: agtypes.Message):
 
 async def user_message(msg: agtypes.Message) -> None:
     """
-    Forward user message to internal group
+    Forward user message to internal admin group
     """
     await msg.bot.log('user_message')
-    group_id = msg.bot.cfg['internal_group_id']
+    group_id = msg.bot.cfg['admin_group_id']
     user = msg.chat
     db = msg.bot.db
 
@@ -47,10 +49,22 @@ async def user_message(msg: agtypes.Message) -> None:
     await msg.forward(group_id, message_thread_id=thread_id)
 
 
+async def admin_message(msg: agtypes.Message) -> None:
+    """
+    Copy admin reply to a user
+    """
+    await msg.bot.log('admin_message')
+    db = msg.bot.db
+
+    user_id = await db.get_user_id(msg.message_thread_id)
+    await msg.copy_to(user_id)
+
+
 def register_handlers(dp: Dispatcher) -> None:
     """
     Register all the handlers to the provided dispatcher
     """
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
+    dp.message.register(admin_message, ~ACommandFilter(), ReplyToBotInGroupForwardedFilter())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
     dp.message.register(added_to_group, NewChatMembersFilter())

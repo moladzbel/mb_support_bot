@@ -1,7 +1,7 @@
 import aiogram.types as agtypes
 
 
-def make_user_info(user) -> str:
+def make_user_info(user: agtypes.User) -> str:
     """
     Text representation of a user
     """

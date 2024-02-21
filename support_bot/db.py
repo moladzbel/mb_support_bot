@@ -5,7 +5,7 @@ class Database:
     pass
 
 
-class MemoryDB(Database):
+class MemoryDb(Database):
 
     def __init__(self, name: str):
         self.name = name
@@ -22,3 +22,18 @@ class MemoryDB(Database):
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
         self._threads[user.id] = thread_id
+
+
+class SqlDb(Database):
+
+    def __init__(self, name: str):
+        ...
+
+    async def get_thread_id(self, user: agtypes.User) -> int:
+        ...
+
+    async def get_user_id(self, thread_id: int) -> int:
+        ...
+
+    async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
+        ...

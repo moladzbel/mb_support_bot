@@ -4,7 +4,7 @@ import os
 from aiogram import Bot
 from aiogram.enums import ParseMode
 
-from .db import MemoryDB
+from .db import MemoryDb
 
 
 BOT_CFG_VARS = (
@@ -18,7 +18,7 @@ class SupportBot(Bot):
         super().__init__(token, parse_mode=ParseMode.HTML)
         self.cfg = cfg
         self.name = cfg['name']
-        self.db = MemoryDB(self.name)
+        self.db = MemoryDb(self.name)
         self._logger = logger
 
     async def log(self, logmsg: str):

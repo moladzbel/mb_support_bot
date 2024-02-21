@@ -1,11 +1,15 @@
 import logging
 import os
+from pathlib import Path
 
 import asyncio
 from dotenv import load_dotenv
 from aiogram import Dispatcher
 
 from support_bot import SupportBot, read_bot_config, register_handlers
+
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 def setup_logger(level=logging.INFO, log_path=None) -> logging.Logger:
@@ -32,7 +36,7 @@ async def main() -> None:
     Create bot instances and run them within a dispatcher
     """
     logger = setup_logger()
-    load_dotenv()
+    load_dotenv(BASE_DIR / 'shared' / '.env')
     bots = []
     dp = Dispatcher()
     register_handlers(dp)

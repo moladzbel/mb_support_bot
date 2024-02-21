@@ -1,9 +1,13 @@
+from pathlib import Path
+
 import aiogram.types as agtypes
 import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine
 
 
 Base = declarative_base()
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Threads(Base):
@@ -26,7 +30,8 @@ class Database:
     """
     Base class for any Database. It's a Repository pattern.
     """
-    pass
+    def __init__(self, name: str):
+        self.name = name
 
 
 class MemoryDb(Database):
@@ -35,7 +40,7 @@ class MemoryDb(Database):
     Suitable for development only - looses data on restart.
     """
     def __init__(self, name: str):
-        self.name = name
+        super().__init__(name)
         self._threads = {}
         self._bans = {}
 
@@ -56,14 +61,24 @@ class SqlDb(Database):
     A database which uses SQL through SQLAlchemy.
     Default choice for production.
     """
-    def __init__(self, name: str):
-        ...
+    def __init__(self, name: str, url: str):
+        super().__init__(name)
+        self.url = url
 
     async def get_thread_id(self, user: agtypes.User) -> int:
-        ...
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.select(Threads).where(Threads.user_id==user.id)
+            result = await conn.execute(query)
+            if one := result.fetchone():
+                return one.thread_id
 
     async def get_user_id(self, thread_id: int) -> int:
-        ...
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.select(Threads).where(Threads.thread_id==thread_id)
+            result = await conn.execute(query)
+            return result.fetchone().user_id
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
-        ...
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.insert(Threads).values(user_id=user.id, thread_id=thread_id)
+            await conn.execute(query)

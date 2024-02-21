@@ -1,2 +1,2 @@
-from .bot import SupportBot, read_bot_config
+from .bot import SupportBot
 from .handlers import register_handlers

@@ -1,40 +1,57 @@
 import logging
 import os
+from pathlib import Path
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
 
-from .db import MemoryDb
+from .db import MemoryDb, SqlDb
 
 
-BOT_CFG_VARS = (
-    'admin_group_id', 'hello_msg',
-)
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class SupportBot(Bot):
+    """
+    Aiogram Bot Wrapper
+    """
+    config_vars = (
+        'admin_group_id', 'hello_msg', 'db_url', 'db_engine',
+    )
 
-    def __init__(self, token: str, cfg: dict, logger: logging.Logger):
-        super().__init__(token, parse_mode=ParseMode.HTML)
-        self.cfg = cfg
-        self.name = cfg['name']
-        self.db = MemoryDb(self.name)
+    def __init__(self, name: str, logger: logging.Logger):
+        self.name = name
         self._logger = logger
 
-    async def log(self, logmsg: str):
-        self._logger.info(f'{self.name}: {logmsg}')
+        token, cfg = self._read_config()
+        self._configure_db(cfg)
 
+        super().__init__(token, parse_mode=ParseMode.HTML)
 
-def read_bot_config(name: str) -> tuple[str, dict]:
-    """
-    Read a bot token and a config with other vars
-    """
-    cfg = {  # default config
-        'name': name,
-        'hello_msg': 'Hello! Write your message',
-    }
-    for bot_var in BOT_CFG_VARS:
-        if envvar := os.getenv(f'{name}_{bot_var.upper()}'):
-            cfg[bot_var] = envvar
+    def _read_config(self) -> tuple[str, dict]:
+        """
+        Read a bot token and a config with other vars
+        """
+        cfg = {
+            'name': self.name,
+            'hello_msg': 'Hello! Write your message',
+            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"shared/{self.name}.sqlite"}',
+            'db_engine': 'aiosqlite',
+        }
+        for bot_var in self.config_vars:
+            if envvar := os.getenv(f'{self.name}_{bot_var.upper()}'):
+                cfg[bot_var] = envvar
 
-    return os.getenv(f'{name}_TOKEN'), cfg
+        return os.getenv(f'{self.name}_TOKEN'), cfg
+
+    def _configure_db(self, cfg):
+        if cfg['db_engine'] == 'memory':
+            self.db = MemoryDb(self.name)
+            cfg['db_url'] == ''
+        elif cfg['db_engine'] == 'aiosqlite':
+            self.db = SqlDb(self.name, cfg['db_url'])
+
+        self.cfg = cfg
+
+    async def log(self, message: str):
+        self._logger.info(f'{self.name}: {message}')

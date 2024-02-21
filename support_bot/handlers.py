@@ -1,3 +1,5 @@
+import logging
+
 import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.filters import Command
@@ -8,20 +10,33 @@ from .filters import (
 from .utils import make_user_info
 
 
+def logg(func):
+    """
+    Log action name without user data,
+    and possible exceptions
+    """
+    async def wrapper(msg: agtypes.Message):
+        await msg.bot.log('admin_message')
+        try:
+            return await func(msg)
+        except Exception as exc:
+            await msg.bot.log_error(exc)
+    return wrapper
+
+
+@logg
 async def cmd_start(msg: agtypes.Message) -> None:
     """
     Reply to /start
     """
-    await msg.bot.log('cmd_start')
-
     await msg.answer(msg.bot.cfg['hello_msg'])
 
 
+@logg
 async def added_to_group(msg: agtypes.Message):
     """
     Report group ID when added to a group
     """
-    await msg.bot.log('added_to_group')
     user = msg.chat
 
     for member in msg.new_chat_members:
@@ -29,11 +44,11 @@ async def added_to_group(msg: agtypes.Message):
             await msg.reply(f'Beep boop. ID of this chat: <code>{user.id}</code>')
 
 
+@logg
 async def user_message(msg: agtypes.Message) -> None:
     """
     Forward user message to internal admin group
     """
-    await msg.bot.log('user_message')
     group_id = msg.bot.cfg['admin_group_id']
     user = msg.chat
     db = msg.bot.db
@@ -49,11 +64,11 @@ async def user_message(msg: agtypes.Message) -> None:
     await msg.forward(group_id, message_thread_id=thread_id)
 
 
+@logg
 async def admin_message(msg: agtypes.Message) -> None:
     """
     Copy admin reply to a user
     """
-    await msg.bot.log('admin_message')
     db = msg.bot.db
 
     user_id = await db.get_user_id(msg.message_thread_id)

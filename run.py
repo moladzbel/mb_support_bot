@@ -95,7 +95,7 @@ def cmd_migrate() -> None:
 
 
 def main() -> None:
-    setup_logger()
+    setup_logger(log_path=BASE_DIR / 'shared' / 'support_bot.log')
     load_dotenv(BASE_DIR / 'shared' / '.env')
     init_bots()
 

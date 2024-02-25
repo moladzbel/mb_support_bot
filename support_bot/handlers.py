@@ -55,11 +55,14 @@ async def added_to_group(msg: agtypes.Message):
     """
     Report group ID when added to a group
     """
-    user = msg.chat
+    group = msg.chat
 
     for member in msg.new_chat_members:
         if member.id == msg.bot.id:
-            await msg.reply(f'Beep boop. ID of this chat: <code>{user.id}</code>')
+            text = f'Hello everyone!\n\nID of this chat: <code>{group.id}</code>'
+            if not group.is_forum:
+                text += '\n\n❗️ Please enable topics in the group'
+            await msg.bot.send_message(group.id, text)
 
 
 @logg

@@ -2,7 +2,7 @@ import logging
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
 
 from .filters import (
@@ -22,7 +22,10 @@ def logg(func):
         try:
             return await func(msg)
         except TelegramForbiddenError as exc:
-            await report_ban(msg)
+            await report_user_ban(msg)
+        except TelegramBadRequest as exc:
+            if 'not enough rights to create a topic' in exc.message:
+                await report_cant_create_topic(msg)
         except Exception as exc:
             await msg.bot.log_error(exc)
 
@@ -30,7 +33,7 @@ def logg(func):
 
 
 @logg
-async def report_ban(msg: agtypes.Message) -> None:
+async def report_user_ban(msg: agtypes.Message) -> None:
     """
     Report when the user banned the bot
     """
@@ -40,6 +43,18 @@ async def report_ban(msg: agtypes.Message) -> None:
         await msg.bot.send_message(
             group_id, 'The user banned the bot', message_thread_id=thread_id,
         )
+
+
+@logg
+async def report_cant_create_topic(msg: agtypes.Message) -> None:
+    """
+    Report when the bot can't create a topic
+    """
+    await msg.bot.send_message(
+        msg.bot.cfg['admin_group_id'],
+        ('The bot has not enough rights to create a topic.\n\n️️️❗ '
+         'Make the bot admin, and give it a "Create topics" permission.'),
+    )
 
 
 @logg
@@ -61,7 +76,7 @@ async def added_to_group(msg: agtypes.Message):
         if member.id == msg.bot.id:
             text = f'Hello everyone!\n\nID of this chat: <code>{group.id}</code>'
             if not group.is_forum:
-                text += '\n\n❗️ Please enable topics in the group'
+                text += '\n\n❗ Please enable topics in the group settings'
             await msg.bot.send_message(group.id, text)
 
 

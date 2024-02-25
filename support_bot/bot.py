@@ -42,6 +42,9 @@ class SupportBot(Bot):
             if envvar := os.getenv(f'{self.name}_{bot_var.upper()}'):
                 cfg[bot_var] = envvar
 
+        cfg['hello_msg'] += (
+            '\n\n<i>The bot created by <a href="https://moladzbel.org/">Youth Bloc</a></i>'
+        )
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self, cfg) -> None:

@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from .filters import (
     ACommandFilter, NewChatMembersFilter, PrivateChatFilter, ReplyToBotInGroupForwardedFilter,
 )
-from .utils import make_user_info
+from .utils import make_short_user_info, make_user_info
 
 
 def logg(func):
@@ -50,10 +50,13 @@ async def report_cant_create_topic(msg: agtypes.Message) -> None:
     """
     Report when the bot can't create a topic
     """
+    user = msg.chat
+
     await msg.bot.send_message(
         msg.bot.cfg['admin_group_id'],
-        ('The bot has not enough rights to create a topic.\n\n️️️❗ '
-         'Make the bot admin, and give it a "Create topics" permission.'),
+        (f'User <b>{make_short_user_info(user)}</b> writes to the bot, '
+         'but the bot has not enough rights to create a topic.\n\n️️️❗ '
+         'Make the bot admin, and give it a "Manage topics" permission.'),
     )
 
 
@@ -62,7 +65,7 @@ async def cmd_start(msg: agtypes.Message) -> None:
     """
     Reply to /start
     """
-    await msg.answer(msg.bot.cfg['hello_msg'])
+    await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
 
 
 @logg

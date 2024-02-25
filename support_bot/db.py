@@ -33,6 +33,15 @@ class Database:
     def __init__(self, name: str):
         self.name = name
 
+    async def get_thread_id(self, user: agtypes.User) -> int:
+        raise NotImplementedError
+
+    async def get_user_id(self, thread_id: int) -> int:
+        raise NotImplementedError
+
+    async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
+        raise NotImplementedError
+
 
 class MemoryDb(Database):
     """
@@ -69,14 +78,15 @@ class SqlDb(Database):
         async with create_async_engine(self.url).begin() as conn:
             query = sa.select(Threads).where(Threads.user_id==user.id)
             result = await conn.execute(query)
-            if one := result.fetchone():
-                return one.thread_id
+            if row := result.fetchone():
+                return row.thread_id
 
     async def get_user_id(self, thread_id: int) -> int:
         async with create_async_engine(self.url).begin() as conn:
             query = sa.select(Threads).where(Threads.thread_id==thread_id)
             result = await conn.execute(query)
-            return result.fetchone().user_id
+            if row := result.fetchone():
+                return row.user_id
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
         async with create_async_engine(self.url).begin() as conn:

@@ -2,6 +2,7 @@ import logging
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command
 
 from .filters import (
@@ -16,12 +17,29 @@ def logg(func):
     and possible exceptions
     """
     async def wrapper(msg: agtypes.Message):
-        await msg.bot.log('admin_message')
+        await msg.bot.log(func.__name__)
+
         try:
             return await func(msg)
+        except TelegramForbiddenError as exc:
+            await report_ban(msg)
         except Exception as exc:
             await msg.bot.log_error(exc)
+
     return wrapper
+
+
+@logg
+async def report_ban(msg: agtypes.Message) -> None:
+    """
+    Report when the user banned the bot
+    """
+    thread_id = msg.message_thread_id
+    if user_id := await msg.bot.db.get_user_id(thread_id):
+        group_id = msg.bot.cfg['admin_group_id']
+        await msg.bot.send_message(
+            group_id, 'The user banned the bot', message_thread_id=thread_id,
+        )
 
 
 @logg

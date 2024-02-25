@@ -15,6 +15,12 @@ class NewChatMembersFilter(Filter):
         return bool(getattr(msg, 'new_chat_members', None))
 
 
+class GroupChatCreatedFilter(Filter):
+
+    async def __call__(self, msg: agtypes.Message) -> bool:
+        return bool(getattr(msg, 'group_chat_created', None))
+
+
 class ACommandFilter(Filter):
 
     async def __call__(self, msg: agtypes.Message) -> bool:

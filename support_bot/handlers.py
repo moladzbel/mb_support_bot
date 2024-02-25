@@ -1,5 +1,3 @@
-import logging
-
 import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -11,41 +9,51 @@ from .filters import (
 from .utils import make_short_user_info, make_user_info
 
 
-def logg(func):
+def log(func):
     """
-    Log action name without user data,
-    and possible exceptions
+    Log action name
     """
-    async def wrapper(msg: agtypes.Message):
+    async def wrapper(msg: agtypes.Message, *args):
         await msg.bot.log(func.__name__)
+        return await func(msg, *args)
 
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+
+def handle_error(func):
+    """
+    Process any exception in a handler
+    """
+    async def wrapper(msg: agtypes.Message, *args):
         try:
-            return await func(msg)
-        except TelegramForbiddenError as exc:
-            await report_user_ban(msg)
+            return await func(msg, *args)
+        except TelegramForbiddenError:
+            await report_user_ban(msg, func)
         except TelegramBadRequest as exc:
             if 'not enough rights to create a topic' in exc.message:
                 await report_cant_create_topic(msg)
         except Exception as exc:
             await msg.bot.log_error(exc)
 
+    wrapper.__name__ = func.__name__
     return wrapper
 
 
-@logg
-async def report_user_ban(msg: agtypes.Message) -> None:
+@log
+async def report_user_ban(msg: agtypes.Message, func) -> None:
     """
     Report when the user banned the bot
     """
     thread_id = msg.message_thread_id
-    if user_id := await msg.bot.db.get_user_id(thread_id):
+    if func.__name__ == 'admin_message' and await msg.bot.db.get_user_id(thread_id):
         group_id = msg.bot.cfg['admin_group_id']
         await msg.bot.send_message(
             group_id, 'The user banned the bot', message_thread_id=thread_id,
         )
 
 
-@logg
+@log
 async def report_cant_create_topic(msg: agtypes.Message) -> None:
     """
     Report when the bot can't create a topic
@@ -54,13 +62,14 @@ async def report_cant_create_topic(msg: agtypes.Message) -> None:
 
     await msg.bot.send_message(
         msg.bot.cfg['admin_group_id'],
-        (f'User <b>{make_short_user_info(user)}</b> writes to the bot, '
+        (f'New user <b>{make_short_user_info(user)}</b> writes to the bot, '
          'but the bot has not enough rights to create a topic.\n\n️️️❗ '
          'Make the bot admin, and give it a "Manage topics" permission.'),
     )
 
 
-@logg
+@log
+@handle_error
 async def cmd_start(msg: agtypes.Message) -> None:
     """
     Reply to /start
@@ -68,7 +77,8 @@ async def cmd_start(msg: agtypes.Message) -> None:
     await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
 
 
-@logg
+@log
+@handle_error
 async def added_to_group(msg: agtypes.Message):
     """
     Report group ID when added to a group
@@ -83,7 +93,8 @@ async def added_to_group(msg: agtypes.Message):
             await msg.bot.send_message(group.id, text)
 
 
-@logg
+@log
+@handle_error
 async def user_message(msg: agtypes.Message) -> None:
     """
     Forward user message to internal admin group
@@ -103,7 +114,8 @@ async def user_message(msg: agtypes.Message) -> None:
     await msg.forward(group_id, message_thread_id=thread_id)
 
 
-@logg
+@log
+@handle_error
 async def admin_message(msg: agtypes.Message) -> None:
     """
     Copy admin reply to a user

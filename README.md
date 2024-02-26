@@ -6,10 +6,10 @@ Support bot for Telegram based on aiogram, SQLAlchemy, and Alembic. Allows to ru
 ## Run in production with Docker
 
 - `cd mb_support_bot`
-- `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-.env-options)
+- `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-env-options)
 - Build the container: `docker build -t mb_support_bot .`
 - Migrate databases: `docker run -v $(pwd)/shared:/bot/shared --env-file .env mb_support_bot python run.py --no-dotenv migrate`
-- Run the bots: `docker run -d -v $(pwd)/shared:/bot/shared --env-file .env mb_support_bot`
+- Run the bots: `docker run -d -v $(pwd)/shared:/bot/shared --env-file .env --restart always mb_support_bot`
 
 SQLite databases and logs are in `shared/` dir.
 

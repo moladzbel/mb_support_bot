@@ -92,11 +92,13 @@ def cmd_migrate() -> None:
             envvar = f'MBSB_SQLALCHEMY_URL="{db_url}"'
             stream = os.popen(f'{envvar} alembic upgrade head')
             stream.read()
+    logger.info('Migrating done')
 
 
 def main() -> None:
     setup_logger(log_path=BASE_DIR / 'shared' / 'support_bot.log')
-    load_dotenv(BASE_DIR / 'shared' / '.env')
+    if not '--no-dotenv' in sys.argv:
+        load_dotenv(BASE_DIR / '.env')
     init_bots()
 
     if 'makemigrations' in sys.argv:

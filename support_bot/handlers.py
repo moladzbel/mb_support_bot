@@ -25,7 +25,7 @@ async def _group_hello(msg: agtypes.Message):
     """
     group = msg.chat
 
-    text = f'Hello everyone!\n\nID of this chat: <code>{group.id}</code>'
+    text = f'Hello!\nID of this chat: <code>{group.id}</code>'
     if not group.is_forum:
         text += '\n\n❗ Please enable topics in the group settings'
     await msg.bot.send_message(group.id, text)
@@ -59,16 +59,18 @@ async def user_message(msg: agtypes.Message) -> None:
     Forward user message to internal admin group
     """
     group_id = msg.bot.cfg['admin_group_id']
-    user = msg.chat
-    db = msg.bot.db
+    user, bot, db = msg.chat, msg.bot, msg.bot.db
 
     if thread_id := await db.get_thread_id(user):
         pass
     else:
-        response = await msg.bot.create_forum_topic(group_id, user.full_name)
+        response = await bot.create_forum_topic(group_id, user.full_name)
         thread_id = response.message_thread_id
         await db.set_thread_id(user, thread_id)
-        await msg.bot.send_message(group_id, make_user_info(user), message_thread_id=thread_id)
+
+        warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
+        text = (await make_user_info(user, bot=bot)) + warn
+        await bot.send_message(group_id, text, message_thread_id=thread_id)
 
     await msg.forward(group_id, message_thread_id=thread_id)
 

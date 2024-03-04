@@ -31,8 +31,6 @@ def setup_logger(level=logging.INFO, log_path=None) -> logging.Logger:
         file_handler.setFormatter(frmtr)
         logger.addHandler(file_handler)
 
-    return logger
-
 
 def init_bots():
     """

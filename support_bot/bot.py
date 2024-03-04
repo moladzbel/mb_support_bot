@@ -43,7 +43,7 @@ class SupportBot(Bot):
                 cfg[bot_var] = envvar
 
         cfg['hello_msg'] += (
-            '\n\n<i>The bot created by <a href="https://moladzbel.org/">Youth Bloc</a></i>'
+            '\n\n<i>The bot created by @moladzbel</i>'
         )
         return os.getenv(f'{self.name}_TOKEN'), cfg
 

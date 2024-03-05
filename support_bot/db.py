@@ -90,5 +90,5 @@ class SqlDb(Database):
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
         async with create_async_engine(self.url).begin() as conn:
-            query = sa.insert(Threads).values(user_id=user.id, thread_id=thread_id)
-            await conn.execute(query)
+            await conn.execute(sa.delete(Threads).filter_by(user_id=user.id))
+            await conn.execute(sa.insert(Threads).values(user_id=user.id, thread_id=thread_id))

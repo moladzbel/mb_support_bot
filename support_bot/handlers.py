@@ -1,5 +1,6 @@
 import aiogram.types as agtypes
 from aiogram import Dispatcher
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 
 from .informing import handle_error, log
@@ -31,6 +32,24 @@ async def _group_hello(msg: agtypes.Message):
     await msg.bot.send_message(group.id, text)
 
 
+async def _new_topic(msg: agtypes.Message):
+    """
+    Create a new topic for the user
+    """
+    group_id = msg.bot.cfg['admin_group_id']
+    user, bot, db = msg.chat, msg.bot, msg.bot.db
+
+    response = await bot.create_forum_topic(group_id, user.full_name)
+    thread_id = response.message_thread_id
+    await db.set_thread_id(user, thread_id)
+
+    warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
+    text = (await make_user_info(user, bot=bot)) + warn
+    await bot.send_message(group_id, text, message_thread_id=thread_id)
+
+    return thread_id
+
+
 @log
 @handle_error
 async def added_to_group(msg: agtypes.Message):
@@ -60,19 +79,14 @@ async def user_message(msg: agtypes.Message) -> None:
     """
     group_id = msg.bot.cfg['admin_group_id']
     user, bot, db = msg.chat, msg.bot, msg.bot.db
+    thread_id = await db.get_thread_id(user) or await _new_topic(msg)
 
-    if thread_id := await db.get_thread_id(user):
-        pass
-    else:
-        response = await bot.create_forum_topic(group_id, user.full_name)
-        thread_id = response.message_thread_id
-        await db.set_thread_id(user, thread_id)
-
-        warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
-        text = (await make_user_info(user, bot=bot)) + warn
-        await bot.send_message(group_id, text, message_thread_id=thread_id)
-
-    await msg.forward(group_id, message_thread_id=thread_id)
+    try:
+        await msg.forward(group_id, message_thread_id=thread_id)
+    except TelegramBadRequest as exc:
+        if 'message thread not found' in exc.message.lower():
+            thread_id = await _new_topic(msg)
+            await msg.forward(group_id, message_thread_id=thread_id)
 
 
 @log

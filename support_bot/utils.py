@@ -5,16 +5,24 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
     """
     Text representation of a user
     """
-    name = clean_html(user.full_name)
+    name = f'<b>{clean_html(user.full_name)}</b>'
     username = f'@{user.username}' if user.username else 'No username'
+    userid = f'<b>ID</b>: <code>{user.id}</code>'
+    fields = [name, username, userid]
 
-    bio = 'No bio'
+    if lang := getattr(user, 'language_code', None):
+        fields.append(f'Language code: {lang}')
+    if premium := getattr(user, 'is_premium', None):
+        fields.append(f'Premium: {premium}')
+
     if bot:
-        user_info = await bot.get_chat(user.id)
-        bio = f'Bio: {user_info.bio}' if user_info.bio else bio
-    bio = clean_html(bio)
+        userinfo = await bot.get_chat(user.id)
+        fields.append(f'<b>Bio</b>: {clean_html(userinfo.bio)}' if userinfo.bio else 'No bio')
 
-    return f'<b>{name}</b>\n\n{username}\n\nID: <code>{user.id}</code>\n\n{bio}'
+        if userinfo.active_usernames and len(userinfo.active_usernames) > 1:
+            fields.append(f'Active usernames: @{", @".join(userinfo.active_usernames)}')
+
+    return '\n\n'.join(fields)
 
 
 def make_short_user_info(user: agtypes.User) -> str:

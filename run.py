@@ -66,8 +66,7 @@ def cmd_makemigrations() -> None:
 
     message = 'migration'
     if '-m' in sys.argv:
-        idx = sys.argv.index('-m') + 1
-        message = sys.argv[idx]
+        message = sys.argv[sys.argv.index('-m') + 1]
 
     db_url = 'sqlite:///:memory:'
     for bot in BOTS:
@@ -86,17 +85,19 @@ def cmd_migrate() -> None:
     for bot in BOTS:
         if 'sql' in bot.cfg['db_engine'].lower():
             logger.info('Migrating DB for %s', bot.name)
-            db_url = bot.cfg['db_url']
-            envvar = f'MBSB_SQLALCHEMY_URL="{db_url}"'
+            envvar = 'MBSB_SQLALCHEMY_URL=' + bot.cfg['db_url']
             stream = os.popen(f'{envvar} alembic upgrade head')
             stream.read()
+
     logger.info('Migrating done')
 
 
 def main() -> None:
     setup_logger(log_path=BASE_DIR / 'shared' / 'support_bot.log')
-    if not '--no-dotenv' in sys.argv:
+
+    if not os.environ.get('IS_DOCKER', False):
         load_dotenv(BASE_DIR / '.env')
+
     init_bots()
 
     if 'makemigrations' in sys.argv:

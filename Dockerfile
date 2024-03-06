@@ -1,5 +1,6 @@
 FROM python:3.10-alpine
 
+ENV IS_DOCKER=True
 WORKDIR /bot
 
 ADD requirements.txt /bot/requirements.txt
@@ -10,4 +11,4 @@ ADD alembic.ini /bot/alembic.ini
 ADD run.py /bot/run.py
 ADD support_bot/ /bot/support_bot/
 
-CMD ["python", "run.py", "--no-dotenv"]
+CMD ["python", "run.py"]

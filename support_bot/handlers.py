@@ -78,7 +78,7 @@ async def user_message(msg: agtypes.Message) -> None:
     Forward user message to internal admin group
     """
     group_id = msg.bot.cfg['admin_group_id']
-    user, bot, db = msg.chat, msg.bot, msg.bot.db
+    user, db = msg.chat, msg.bot.db
     thread_id = await db.get_thread_id(user) or await _new_topic(msg)
 
     try:

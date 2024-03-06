@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 import os
 import sys
@@ -93,7 +94,7 @@ def cmd_migrate() -> None:
 
 
 def main() -> None:
-    setup_logger(log_path=BASE_DIR / 'shared' / 'support_bot.log')
+    setup_logger(log_path=BASE_DIR / '..' / 'shared' / 'support_bot.log')
 
     if not os.environ.get('IS_DOCKER', False):
         load_dotenv(BASE_DIR / '.env')

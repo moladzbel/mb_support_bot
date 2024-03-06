@@ -35,7 +35,7 @@ class SupportBot(Bot):
         cfg = {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
-            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"shared/{self.name}.sqlite"}',
+            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"../shared/{self.name}.sqlite"}',
             'db_engine': 'aiosqlite',
         }
         for bot_var in self.config_vars:

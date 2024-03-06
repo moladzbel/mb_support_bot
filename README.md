@@ -3,14 +3,21 @@
 
 Support bot for Telegram based on aiogram, SQLAlchemy, and Alembic. Allows to run any number of support bots in one process, each with its own configuration and database.
 
-## Run in production with Docker
+## Run in production
+
+### First time
 
 - Install Docker: https://docs.docker.com/engine/install/
 - `cd mb_support_bot`
 - `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-env-options)
-- Build the container: `docker build -t mb_support_bot .`
-- Migrate databases: `docker run -v $(pwd)/shared:/bot/shared --env-file .env mb_support_bot python run.py migrate`
-- Run the bots: `docker run -d -v $(pwd)/shared:/bot/shared --env-file .env --restart always mb_support_bot`
+
+### Then only
+
+- Run the bots: `docker compose up -d`
+
+### If `.env` has been modified
+
+- Restart the container: `docker compose down; docker compose up -d`
 
 SQLite databases and logs are in `shared/` dir.
 
@@ -47,14 +54,14 @@ The following variables are available in `.env` file:
 - Add some name unique for the bot to `BOTS_ENABLED` list in `.env`
 - Place bot token to `{BOT_NAME}_TOKEN` var in `.env`
 - Create a new group, enable Topics in the group settings
-- Stop the container, migrate database, and run it again (see the commands in the [first section](#run-in-production-with-docker))
+- Restart the container: `docker compose down; docker compose up -d`
 - Add your bot to the group, make it admin with "Manage topics" permission
 - Copy chat ID reported by the bot to `{BOT_NAME}_ADMIN_GROUP_ID` var in `.env`
-- Stop the container, and run it as usual
+- Restart the container again
 
 ### ... change the group for existing bot
 
 - add the bot to a new group
 - rename the bot in `.env`. Use a name not existing in `.env` before
 - place the new `{BOT_NAME}_ADMIN_GROUP_ID` to `.env`
-- Stop the container, migrate database, and run it again (see the commands in the [first section](#run-in-production-with-docker))
+- Restart the container: `docker compose down; docker compose up -d`

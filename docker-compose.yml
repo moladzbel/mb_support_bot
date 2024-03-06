@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  support_bot:
+    build: .
+    volumes:
+      - ./code:/code
+      - ./shared:/shared
+    env_file:
+      - .env
+    restart: always

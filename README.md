@@ -45,23 +45,42 @@ The following variables are available in `.env` file:
 - `{BOT_NAME}_HELLO_MSG` - Optional. Your first message to a new user.
 - `{BOT_NAME}_DB_URL` - Optional. Database URL if you want to use something other than SQLite in `shared/`.
 - `{BOT_NAME}_DB_ENGINE` - Optional. Database library to use. Currently supported values are `memory` and `aiosqlite`.
+- `{BOT_NAME}_SAVE_MESSAGES_GSHEET_CRED_FILE` - Optional. Google Service Account credentials file. If set, all the income and outcome bot messages are being saved to Google Sheets. See the setup steps in "How To" below.
+- `{BOT_NAME}_SAVE_MESSAGES_GSHEET_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
 
-## How to
+## How To
 
 ### ... add a new bot to the already running instance
 
-- Create a bot in @BotFather, enable access to messages
-- Add some name unique for the bot to `BOTS_ENABLED` list in `.env`
-- Place bot token to `{BOT_NAME}_TOKEN` var in `.env`
-- Create a new group, enable Topics in the group settings
-- Restart the container: `docker compose down; docker compose up -d`
-- Add your bot to the group, make it admin with "Manage topics" permission
-- Copy chat ID reported by the bot to `{BOT_NAME}_ADMIN_GROUP_ID` var in `.env`
-- Restart the container again
+1. Create a bot in @BotFather, enable access to messages
+1. Add some name unique for the bot to `BOTS_ENABLED` list in `.env`
+1. Place bot token to `{BOT_NAME}_TOKEN` var in `.env`
+1. Create a new group, enable Topics in the group settings
+1. Restart the container: `docker compose down; docker compose up -d`
+1. Add your bot to the group, make it admin with "Manage topics" permission
+1. Copy chat ID reported by the bot to `{BOT_NAME}_ADMIN_GROUP_ID` var in `.env`
+1. Restart the container again
 
 ### ... change the group for existing bot
 
-- add the bot to a new group
-- rename the bot in `.env`. Use a name not existing in `.env` before
-- place the new `{BOT_NAME}_ADMIN_GROUP_ID` to `.env`
-- Restart the container: `docker compose down; docker compose up -d`
+1. add the bot to a new group
+1. rename the bot in `.env`. Use a name not existing in `.env` before
+1. place the new `{BOT_NAME}_ADMIN_GROUP_ID` to `.env`
+1. Restart the container: `docker compose down; docker compose up -d`
+
+### ... save all the income and outcome bot messages to Google Sheets
+
+1. Head to [Google Developers Console](https://console.developers.google.com/) and create a new project (or select the one you already have).
+1. Click "+ Enable APIs and services"
+1. In the box labeled “Search for APIs and Services”, search for “Google Drive API” and enable it.
+1. In the box labeled “Search for APIs and Services”, search for “Google Sheets API” and enable it.
+1. Go to "APIs & Services > Credentials" and choose “Create credentials > Service account”. Make "Service account name" something similar to the bot name.
+1. Click “Create” and “Done”.
+1. Press “Manage service accounts” above Service Accounts.
+1. Press on ⋮ near recently created service account and select “Manage keys” and then click on “ADD KEY > Create new key”.
+1. Select JSON key type and press “Create”. You will automatically download a JSON file with credentials.
+1. Important! In the JSON file there is an app email in "client_email" field (it's the same as in "APIs & Services > Credentials > Service Accounts"). Go to your spreadsheet and share it with this client_email, just like you do with any other Google account.
+1. Place the JSON file on a server, to `mb_support_bot/shared/{bot_name}/{your_file.json}`.
+1. Specify the name of the JSON file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEET_CRED_FILE` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEET_CRED_FILE=mybot-ga-api-ce213a7201e5.json`
+1. Specify the name of your shared spreadsheet file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEET_FILENAME` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEET_FILENAME=Mybot archive`.
+1. Restart the bot to re-read `.env`

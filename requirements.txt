@@ -1,5 +1,6 @@
 aiogram==3.4.1
 aiosqlite==0.20.0
 alembic==1.13.1
+gspread==6.0.2
 python-dotenv==1.0.1
 SQLAlchemy==2.0.27

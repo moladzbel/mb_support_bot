@@ -16,7 +16,8 @@ class SupportBot(Bot):
     Aiogram Bot Wrapper
     """
     config_vars = (
-        'admin_group_id', 'hello_msg', 'db_url', 'db_engine',
+        'admin_group_id', 'hello_msg', 'db_url', 'db_engine', 'save_messages_gsheet_cred_file',
+        'save_messages_gsheet_filename',
     )
 
     def __init__(self, name: str, logger: logging.Logger):
@@ -35,16 +36,14 @@ class SupportBot(Bot):
         cfg = {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
-            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"../shared/{self.name}.sqlite"}',
+            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"../shared/{self.name}/db.sqlite"}',
             'db_engine': 'aiosqlite',
         }
         for bot_var in self.config_vars:
             if envvar := os.getenv(f'{self.name}_{bot_var.upper()}'):
                 cfg[bot_var] = envvar
 
-        cfg['hello_msg'] += (
-            '\n\n<i>The bot created by @moladzbel</i>'
-        )
+        cfg['hello_msg'] += '\n\n<i>The bot created by @moladzbel</i>'
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self, cfg) -> None:

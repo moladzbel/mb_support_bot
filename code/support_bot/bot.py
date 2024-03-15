@@ -4,6 +4,7 @@ from pathlib import Path
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
+from google.oauth2.service_account import Credentials
 
 from .db import MemoryDb, SqlDb
 
@@ -15,10 +16,11 @@ class SupportBot(Bot):
     """
     Aiogram Bot Wrapper
     """
-    config_vars = (
-        'admin_group_id', 'hello_msg', 'db_url', 'db_engine', 'save_messages_gsheet_cred_file',
-        'save_messages_gsheet_filename',
+    cfg_vars = (
+        'admin_group_id', 'hello_msg', 'db_url', 'db_engine', 'save_messages_gsheets_cred_file',
+        'save_messages_gsheets_filename',
     )
+    botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
     def __init__(self, name: str, logger: logging.Logger):
         self.name = name
@@ -33,15 +35,23 @@ class SupportBot(Bot):
         """
         Read a bot token and a config with other vars
         """
+        botdir = BASE_DIR / '..' / 'shared' / self.name
+        botdir.mkdir(parents=True, exist_ok=True)
+
         cfg = {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
-            'db_url': f'sqlite+aiosqlite:///{BASE_DIR / f"../shared/{self.name}/db.sqlite"}',
+            'db_url': f'sqlite+aiosqlite:///{botdir}/db.sqlite',
             'db_engine': 'aiosqlite',
         }
-        for bot_var in self.config_vars:
-            if envvar := os.getenv(f'{self.name}_{bot_var.upper()}'):
-                cfg[bot_var] = envvar
+        for var in self.cfg_vars:
+            if envvar := os.getenv(f'{self.name}_{var.upper()}'):
+                cfg[var] = envvar
+
+        # convert vars with filenames to actual pathes
+        for var in self.botdir_file_cfg_vars:
+            if var in cfg:
+                cfg[var] = botdir / cfg[var]
 
         cfg['hello_msg'] += '\n\n<i>The bot created by @moladzbel</i>'
         return os.getenv(f'{self.name}_TOKEN'), cfg
@@ -60,3 +70,16 @@ class SupportBot(Bot):
 
     async def log_error(self, exception: Exception) -> None:
         self._logger.exception(str(exception))
+
+    def get_gsheets_creds(self):
+        """
+        A callback to work with Google Sheets through gspread_asyncio
+        """
+        cred_file = self.cfg.get('save_messages_gsheets_cred_file', None)
+        creds = Credentials.from_service_account_file(cred_file)
+        scoped = creds.with_scopes([
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ])
+        return scoped

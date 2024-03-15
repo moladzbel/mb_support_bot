@@ -3,7 +3,7 @@ from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 
-from .informing import handle_error, log
+from .informing import handle_error, log, save_admin_message, save_user_message
 from .filters import (
     ACommandFilter, GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
     ReplyToBotInGroupForwardedFilter,
@@ -88,6 +88,8 @@ async def user_message(msg: agtypes.Message) -> None:
             thread_id = await _new_topic(msg)
             await msg.forward(group_id, message_thread_id=thread_id)
 
+    await save_user_message(msg)
+
 
 @log
 @handle_error
@@ -99,6 +101,8 @@ async def admin_message(msg: agtypes.Message) -> None:
 
     user_id = await db.get_user_id(msg.message_thread_id)
     await msg.copy_to(user_id)
+
+    await save_admin_message(msg, user_id)
 
 
 def register_handlers(dp: Dispatcher) -> None:

@@ -1,5 +1,7 @@
 import aiogram.types as agtypes
 
+from .const import MsgType
+
 
 async def make_user_info(user: agtypes.User, bot=None) -> str:
     """
@@ -38,3 +40,38 @@ def clean_html(string):
     for char in '<>/\\':
         string = string.replace(char, '')
     return string
+
+
+def determine_msg_type(msg: agtypes.Message):
+    """
+    Determine the type of message
+    by inspecting the content of the message object
+    """
+    if msg.photo:
+        return MsgType.photo
+    elif msg.video:
+        return MsgType.video
+    elif msg.animation:
+        return MsgType.animation
+    elif msg.sticker:
+        return MsgType.sticker
+    elif msg.audio:
+        return MsgType.audio
+    elif msg.voice:
+        return MsgType.voice
+    elif msg.document:
+        return MsgType.document
+    elif msg.video_note:
+        return MsgType.video_note
+    elif msg.contact:
+        return MsgType.contact
+    elif msg.location:
+        return MsgType.location
+    elif msg.venue:
+        return MsgType.venue
+    elif msg.poll:
+        return MsgType.poll
+    elif msg.dice:
+        return MsgType.dice
+    else:
+        return MsgType.regular_or_other

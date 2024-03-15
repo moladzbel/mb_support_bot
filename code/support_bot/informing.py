@@ -5,12 +5,13 @@ technical informing in chats, writing logs
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
+from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
 from .utils import make_short_user_info
 
 
 def log(func):
     """
-    Log action name
+    Decorator. Logs action name
     """
     async def wrapper(msg: agtypes.Message, *args):
         await msg.bot.log(func.__name__)
@@ -22,7 +23,7 @@ def log(func):
 
 def handle_error(func):
     """
-    Process any exception in a handler
+    Decorator. Processes any exception in a handler
     """
     async def wrapper(msg: agtypes.Message, *args):
         try:
@@ -65,3 +66,25 @@ async def report_cant_create_topic(msg: agtypes.Message) -> None:
          'but the bot has not enough rights to create a topic.\n\n️️️❗ '
          'Make the bot admin, and give it a "Manage topics" permission.'),
     )
+
+
+async def save_admin_message(msg: agtypes.Message, user_id) -> None:
+    """
+    Entrypoint for all the mechanisms of saving messages sent by admin.
+    There is only one currently: Google Sheets.
+    """
+    gsheets_cred_file = msg.bot.cfg.get('save_messages_gsheets_cred_file', None)
+    gsheets_filename = msg.bot.cfg.get('save_messages_gsheets_filename', None)
+    if gsheets_cred_file and gsheets_filename:
+        await gsheets_save_admin_message(msg, user_id)
+
+
+async def save_user_message(msg: agtypes.Message) -> None:
+    """
+    Entrypoint for all the mechanisms of saving messages sent by user.
+    There is only one currently: Google Sheets.
+    """
+    gsheets_cred_file = msg.bot.cfg.get('save_messages_gsheets_cred_file', None)
+    gsheets_filename = msg.bot.cfg.get('save_messages_gsheets_filename', None)
+    if gsheets_cred_file and gsheets_filename:
+        await gsheets_save_user_message(msg)

@@ -45,8 +45,8 @@ The following variables are available in `.env` file:
 - `{BOT_NAME}_HELLO_MSG` - Optional. Your first message to a new user.
 - `{BOT_NAME}_DB_URL` - Optional. Database URL if you want to use something other than SQLite in `shared/`.
 - `{BOT_NAME}_DB_ENGINE` - Optional. Database library to use. Currently supported values are `memory` and `aiosqlite`.
-- `{BOT_NAME}_SAVE_MESSAGES_GSHEET_CRED_FILE` - Optional. Google Service Account credentials file. If set, all the income and outcome bot messages are being saved to Google Sheets. See the setup steps in "How To" below.
-- `{BOT_NAME}_SAVE_MESSAGES_GSHEET_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
+- `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_CRED_FILE` - Optional. Google Service Account credentials file. If set, all the income and outcome bot messages are being saved to Google Sheets. See the setup steps in "How To" below.
+- `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
 
 ## How To
 
@@ -81,6 +81,6 @@ The following variables are available in `.env` file:
 1. Select JSON key type and press “Create”. You will automatically download a JSON file with credentials.
 1. Important! In the JSON file there is an app email in "client_email" field (it's the same as in "APIs & Services > Credentials > Service Accounts"). Go to your spreadsheet and share it with this client_email, just like you do with any other Google account.
 1. Place the JSON file on a server, to `mb_support_bot/shared/{bot_name}/{your_file.json}`.
-1. Specify the name of the JSON file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEET_CRED_FILE` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEET_CRED_FILE=mybot-ga-api-ce213a7201e5.json`
-1. Specify the name of your shared spreadsheet file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEET_FILENAME` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEET_FILENAME=Mybot archive`.
+1. Specify the name of the JSON file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_CRED_FILE` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEETS_CRED_FILE=mybot-ga-api-ce213a7201e5.json`
+1. Specify the name of your shared spreadsheet file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_FILENAME` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEETS_FILENAME=Mybot archive`.
 1. Restart the bot to re-read `.env`

@@ -10,20 +10,16 @@ Base = declarative_base()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-class Threads(Base):
-    __tablename__ = "threads"
+class TgUsers(Base):
+    __tablename__ = "tgusers"
 
     id = sa.Column(sa.Integer, primary_key=True, index=True)
-    user_id = sa.Column(sa.Integer, index=True)
+    user_id = sa.Column(sa.Integer, index=True, nullable=False)
+    full_name = sa.Column(sa.String(129))
+    username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
-
-
-class Bans(Base):
-    __tablename__ = "bans"
-
-    id = sa.Column(sa.Integer, primary_key=True, index=True)
-    user_id = sa.Column(sa.Integer, index=True)
-    is_shadow = sa.Column(sa.Boolean, default=False)
+    banned = sa.Column(sa.Boolean, default=False, nullable=False)
+    shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
 
 
 class Database:
@@ -50,19 +46,18 @@ class MemoryDb(Database):
     """
     def __init__(self, name: str):
         super().__init__(name)
-        self._threads = {}
-        self._bans = {}
+        self._tgusers = {}
 
     async def get_thread_id(self, user: agtypes.User) -> int:
-        return self._threads.get(user.id)
+        return self._tgusers.get(user.id)['thread_id']
 
     async def get_user_id(self, thread_id: int) -> int:
-        for k, v in self._threads.items():
-            if v == thread_id:
-                return k
+        for k, v in self._tgusers.items():
+            if v['thread_id'] == thread_id:
+                return k['user_id']
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
-        self._threads[user.id] = thread_id
+        self._tgusers[user.id] = {'thread_id': thread_id}
 
 
 class SqlDb(Database):
@@ -76,19 +71,19 @@ class SqlDb(Database):
 
     async def get_thread_id(self, user: agtypes.User) -> int:
         async with create_async_engine(self.url).begin() as conn:
-            query = sa.select(Threads).where(Threads.user_id==user.id)
+            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
             result = await conn.execute(query)
             if row := result.fetchone():
                 return row.thread_id
 
     async def get_user_id(self, thread_id: int) -> int:
         async with create_async_engine(self.url).begin() as conn:
-            query = sa.select(Threads).where(Threads.thread_id==thread_id)
+            query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
             result = await conn.execute(query)
             if row := result.fetchone():
                 return row.user_id
 
     async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
         async with create_async_engine(self.url).begin() as conn:
-            await conn.execute(sa.delete(Threads).filter_by(user_id=user.id))
-            await conn.execute(sa.insert(Threads).values(user_id=user.id, thread_id=thread_id))
+            await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))
+            await conn.execute(sa.insert(TgUsers).values(user_id=user.id, thread_id=thread_id))

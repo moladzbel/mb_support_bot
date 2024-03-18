@@ -85,8 +85,8 @@ async def user_message(msg: agtypes.Message) -> None:
         await msg.forward(group_id, message_thread_id=tguser.thread_id)
     except TelegramBadRequest as exc:
         if 'message thread not found' in exc.message.lower():
-            thread_id = await _new_topic(msg)
-            await msg.forward(group_id, message_thread_id=thread_id)
+            tguser = await _new_topic(msg)
+            await msg.forward(group_id, message_thread_id=tguser.thread_id)
 
     await save_user_message(msg)
 

@@ -102,4 +102,5 @@ class SqlDb(Database):
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))
             await conn.execute(sa.insert(TgUsers).values(**asdict(tguser)))
-            return tguser
+
+        return tguser

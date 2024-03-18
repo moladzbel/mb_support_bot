@@ -8,7 +8,7 @@ from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
 from gspread.utils import ValueInputOption
 
 from .const import MsgType
-from .utils import determine_msg_type
+from .utils import determine_msg_type, make_short_user_info
 
 
 CLIENT = None
@@ -40,7 +40,7 @@ def _msg_to_row_data(msg: agtypes.Message):
     """
     when = msg.date.strftime("%Y-%m-%d %H:%M:%S %Z")
     typ = determine_msg_type(msg)
-    who = msg.from_user.id
+    who = make_short_user_info(msg.from_user, formatting=False)
     forward = 'Yes' if msg.forward_origin else 'No'
     text = msg.text or msg.caption
 
@@ -119,12 +119,12 @@ async def _insert_row(sheet: AsyncioGspreadWorksheet, rd: dict, index: int) -> N
 
 
 
-async def gsheets_save_admin_message(msg: agtypes.Message, user_id) -> None:
+async def gsheets_save_admin_message(msg: agtypes.Message, tguser) -> None:
     """
     Save a message written by Admin in Google Sheets
     """
     sheet, row_data, index = await _gsheets_connect(msg)
-    row_data['to_whom'] = f'"{user_id}"'
+    row_data['to_whom'] = make_short_user_info(tguser=tguser, formatting=False)
     await _insert_row(sheet, row_data, index)
 
 
@@ -133,6 +133,6 @@ async def gsheets_save_user_message(msg: agtypes.Message) -> None:
     Save a message written by User in Google Sheets
     """
     sheet, row_data, index = await _gsheets_connect(msg)
-    bnl = msg.bot.name.lower()
-    row_data['to_whom'] = bnl if bnl.endswith('bot') else f'{bnl} bot'
+    botname = msg.bot.name.lower()
+    row_data['to_whom'] = botname if botname.endswith('bot') else f'{botname} bot'
     await _insert_row(sheet, row_data, index)

@@ -1,3 +1,4 @@
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import aiogram.types as agtypes
@@ -22,6 +23,19 @@ class TgUsers(Base):
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
 
 
+@dataclass
+class DbTgUser:
+    """
+    Fake TgUser to return inserted TgUser row without another DB query
+    """
+    user_id: int
+    full_name: str
+    username: str
+    thread_id: int
+    banned: bool = False
+    shadow_banned: bool = False
+
+
 class Database:
     """
     Base class for any Database. It's a Repository pattern.
@@ -29,13 +43,10 @@ class Database:
     def __init__(self, name: str):
         self.name = name
 
-    async def get_thread_id(self, user: agtypes.User) -> int:
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
         raise NotImplementedError
 
-    async def get_user_id(self, thread_id: int) -> int:
-        raise NotImplementedError
-
-    async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
+    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
         raise NotImplementedError
 
 
@@ -48,16 +59,20 @@ class MemoryDb(Database):
         super().__init__(name)
         self._tgusers = {}
 
-    async def get_thread_id(self, user: agtypes.User) -> int:
-        return self._tgusers.get(user.id)['thread_id']
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
+        if user:
+            return self._tgusers.get(user.id)
 
-    async def get_user_id(self, thread_id: int) -> int:
         for k, v in self._tgusers.items():
             if v['thread_id'] == thread_id:
-                return k['user_id']
+                return k
 
-    async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
-        self._tgusers[user.id] = {'thread_id': thread_id}
+    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
+        tguser = DbTgUser(
+            user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
+        )
+        self._tgusers[user.id] = tguser
+        return tguser
 
 
 class SqlDb(Database):
@@ -69,21 +84,22 @@ class SqlDb(Database):
         super().__init__(name)
         self.url = url
 
-    async def get_thread_id(self, user: agtypes.User) -> int:
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
         async with create_async_engine(self.url).begin() as conn:
-            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
+            if user:
+                query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
+            else:
+                query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
+
             result = await conn.execute(query)
             if row := result.fetchone():
-                return row.thread_id
+                return row
 
-    async def get_user_id(self, thread_id: int) -> int:
-        async with create_async_engine(self.url).begin() as conn:
-            query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
-            result = await conn.execute(query)
-            if row := result.fetchone():
-                return row.user_id
-
-    async def set_thread_id(self, user: agtypes.User, thread_id: int) -> None:
+    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
+        tguser = DbTgUser(
+            user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
+        )
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))
-            await conn.execute(sa.insert(TgUsers).values(user_id=user.id, thread_id=thread_id))
+            await conn.execute(sa.insert(TgUsers).values(**asdict(tguser)))
+            return tguser

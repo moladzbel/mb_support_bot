@@ -18,25 +18,33 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
         fields.append(f'Premium: {premium}')
 
     if bot:
-        userinfo = await bot.get_chat(user.id)
-        fields.append(f'<b>Bio</b>: {clean_html(userinfo.bio)}' if userinfo.bio else 'No bio')
+        uinfo = await bot.get_chat(user.id)
+        fields.append(f'<b>Bio</b>: {clean_html(uinfo.bio)}' if uinfo.bio else 'No bio')
 
-        if userinfo.active_usernames and len(userinfo.active_usernames) > 1:
-            fields.append(f'Active usernames: @{", @".join(userinfo.active_usernames)}')
+        if uinfo.active_usernames and len(uinfo.active_usernames) > 1:
+            fields.append(f'Active usernames: @{", @".join(uinfo.active_usernames)}')
 
     return '\n\n'.join(fields)
 
 
-def make_short_user_info(user: agtypes.User) -> str:
+def make_short_user_info(user: agtypes.User=None, tguser=None, formatting: bool=True) -> str:
     """
     Short text representation of a user
     """
-    name = user.full_name.replace('<', '').replace('>', '')
-    tech_part = f'@{user.username}, id {user.id}' if user.username else f'id {user.id}'
-    return f'<b>{name}</b> ({tech_part})'
+    if user:
+        user_id = user.id
+    elif tguser:
+        user_id = tguser.user_id
+        user = tguser
+
+    fullname = clean_html(user.full_name or '')
+    name = f'<b>{fullname}</b>' if formatting else f'"{fullname}"'
+
+    tech_part = f'@{user.username}, id {user_id}' if user.username else f'id {user_id}'
+    return f'{name} ({tech_part})'
 
 
-def clean_html(string):
+def clean_html(string: str) -> str:
     for char in '<>/\\':
         string = string.replace(char, '')
     return string

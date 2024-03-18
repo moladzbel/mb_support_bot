@@ -41,13 +41,13 @@ async def _new_topic(msg: agtypes.Message):
 
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
-    await db.set_thread_id(user, thread_id)
+    tguser = await db.set_tguser(user, thread_id)
 
     warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
     text = (await make_user_info(user, bot=bot)) + warn
     await bot.send_message(group_id, text, message_thread_id=thread_id)
 
-    return thread_id
+    return tguser
 
 
 @log
@@ -79,10 +79,10 @@ async def user_message(msg: agtypes.Message) -> None:
     """
     group_id = msg.bot.cfg['admin_group_id']
     user, db = msg.chat, msg.bot.db
-    thread_id = await db.get_thread_id(user) or await _new_topic(msg)
+    tguser = await db.get_tguser(user=user) or await _new_topic(msg)
 
     try:
-        await msg.forward(group_id, message_thread_id=thread_id)
+        await msg.forward(group_id, message_thread_id=tguser.thread_id)
     except TelegramBadRequest as exc:
         if 'message thread not found' in exc.message.lower():
             thread_id = await _new_topic(msg)
@@ -99,10 +99,10 @@ async def admin_message(msg: agtypes.Message) -> None:
     """
     db = msg.bot.db
 
-    user_id = await db.get_user_id(msg.message_thread_id)
-    await msg.copy_to(user_id)
+    tguser = await db.get_tguser(thread_id=msg.message_thread_id)
+    await msg.copy_to(tguser.user_id)
 
-    await save_admin_message(msg, user_id)
+    await save_admin_message(msg, tguser)
 
 
 def register_handlers(dp: Dispatcher) -> None:

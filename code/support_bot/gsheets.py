@@ -1,3 +1,6 @@
+"""
+Work with Google Sheets
+"""
 import string
 from datetime import datetime
 
@@ -13,7 +16,7 @@ from .utils import determine_msg_type, make_short_user_info
 
 CLIENT = None
 CLIENT_MANAGER = None
-COLUMN_NAMES = 'When', 'Type', 'Who', 'To whom', 'Text', 'Filename', 'Forward'
+COLUMN_NAMES = 'When, UTC', 'Type', 'Who', 'To whom', 'Text', 'Filename', 'Forward'
 LAST_COLUMN_SHEET_LETTER = string.ascii_uppercase[len(COLUMN_NAMES) - 1]
 
 
@@ -32,15 +35,25 @@ async def _get_client(bot):
     return CLIENT
 
 
+def _to_gsheet_text(obj):
+    """
+    Prepare object to be posted to Google Sheets as text
+    """
+    text = str(obj or '')
+    if text and not text[0].isalpha():
+        text = "'" + text
+    return text
+
+
 def _msg_to_row_data(msg: agtypes.Message):
     """
     Convert message to Google Sheets fields.
     To_whom is ommited since it's different
     for admin and user messages
     """
-    when = msg.date.strftime("%Y-%m-%d %H:%M:%S %Z")
+    when = msg.date.strftime('%Y-%m-%d %H:%M:%S')
     typ = determine_msg_type(msg)
-    who = make_short_user_info(msg.from_user, formatting=False)
+    who = make_short_user_info(msg.from_user)
     forward = 'Yes' if msg.forward_origin else 'No'
     text = msg.text or msg.caption
 
@@ -51,11 +64,11 @@ def _msg_to_row_data(msg: agtypes.Message):
     if typ == MsgType.poll:
         text = msg.poll.question
 
-    # Final conversions
-    text = f'"{text}"' if text else ''
-    filename = f'"{filename}"' if filename else ''
-
-    return {'when': when, 'type': typ, 'who': who, 'text': text, 'filename': filename,
+    return {'when': when,
+            'type': typ,
+            'who': _to_gsheet_text(who),
+            'text': _to_gsheet_text(text),
+            'filename': _to_gsheet_text(filename),
             'forward': forward}
 
 
@@ -118,13 +131,12 @@ async def _insert_row(sheet: AsyncioGspreadWorksheet, rd: dict, index: int) -> N
     await sheet.insert_row(row, index=index, value_input_option=ValueInputOption.user_entered)
 
 
-
 async def gsheets_save_admin_message(msg: agtypes.Message, tguser) -> None:
     """
     Save a message written by Admin in Google Sheets
     """
     sheet, row_data, index = await _gsheets_connect(msg)
-    row_data['to_whom'] = make_short_user_info(tguser=tguser, formatting=False)
+    row_data['to_whom'] = _to_gsheet_text(make_short_user_info(tguser=tguser))
     await _insert_row(sheet, row_data, index)
 
 
@@ -133,6 +145,9 @@ async def gsheets_save_user_message(msg: agtypes.Message) -> None:
     Save a message written by User in Google Sheets
     """
     sheet, row_data, index = await _gsheets_connect(msg)
+
     botname = msg.bot.name.lower()
-    row_data['to_whom'] = botname if botname.endswith('bot') else f'{botname} bot'
+    to_whom = botname if botname.endswith('bot') else f'{botname} bot'
+    row_data['to_whom'] = _to_gsheet_text(to_whom)
+
     await _insert_row(sheet, row_data, index)

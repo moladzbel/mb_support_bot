@@ -18,6 +18,7 @@ async def cmd_start(msg: agtypes.Message) -> None:
     Reply to /start
     """
     await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
+    await save_user_message(msg)
 
 
 async def _group_hello(msg: agtypes.Message):

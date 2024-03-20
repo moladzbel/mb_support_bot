@@ -27,7 +27,7 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
     return '\n\n'.join(fields)
 
 
-def make_short_user_info(user: agtypes.User=None, tguser=None, formatting: bool=True) -> str:
+def make_short_user_info(user: agtypes.User=None, tguser=None) -> str:
     """
     Short text representation of a user
     """
@@ -38,10 +38,8 @@ def make_short_user_info(user: agtypes.User=None, tguser=None, formatting: bool=
         user = tguser
 
     fullname = clean_html(user.full_name or '')
-    name = f'<b>{fullname}</b>' if formatting else f'"{user.full_name}"'
-
     tech_part = f'@{user.username}, id {user_id}' if user.username else f'id {user_id}'
-    return f'{name} ({tech_part})'
+    return f'{fullname} ({tech_part})'
 
 
 def clean_html(string: str) -> str:

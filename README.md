@@ -7,9 +7,9 @@ Support bot for Telegram based on aiogram, SQLAlchemy, and Alembic. Allows to ru
 
 ### First time
 
-- Install Docker: https://docs.docker.com/engine/install/
+- Install latest Docker and Docker Compose
 - `cd mb_support_bot`
-- `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-env-options)
+- `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-env-options)).
 
 ### Then only
 

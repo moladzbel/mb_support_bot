@@ -48,7 +48,7 @@ def clean_html(string: str) -> str:
     return string
 
 
-def determine_msg_type(msg: agtypes.Message):
+def determine_msg_type(msg: agtypes.Message) -> str:
     """
     Determine the type of message
     by inspecting the content of the message object

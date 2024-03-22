@@ -3,6 +3,7 @@ Work with Google Sheets
 """
 import string
 from datetime import datetime
+from typing import Any
 
 import aiogram.types as agtypes
 import gspread_asyncio
@@ -35,7 +36,7 @@ async def _get_client(bot):
     return CLIENT
 
 
-def _to_gsheet_text(obj):
+def _to_gsheet_text(obj: Any) -> str:
     """
     Prepare object to be posted to Google Sheets as text
     """
@@ -45,7 +46,7 @@ def _to_gsheet_text(obj):
     return text
 
 
-def _msg_to_row_data(msg: agtypes.Message):
+def _msg_to_row_data(msg: agtypes.Message) -> dict:
     """
     Convert message to Google Sheets fields.
     To_whom is ommited since it's different

@@ -83,12 +83,9 @@ async def _ensure_worksheet(doc):
         sheet = await doc.worksheet(name)
     except WorksheetNotFound:
         sheet = await doc.add_worksheet(title=name, cols=len(COLUMN_NAMES), rows=5)
-
-        await sheet.batch_format([{"range": f"A1:{LAST_COLUMN_SHEET_LETTER}1",
-                                   "format": {"textFormat": {"bold": True}}}])
-        await sheet.batch_format([{"range": f"A2:{LAST_COLUMN_SHEET_LETTER}2",
-                                   "format": {"textFormat": {"bold": False}}}])
-        await sheet.update(f"A1:{LAST_COLUMN_SHEET_LETTER}1", [COLUMN_NAMES])
+        L = LAST_COLUMN_SHEET_LETTER
+        await format_cells(sheet, f"A1:{L}1", ('bold', 'underline'))
+        await sheet.update(f"A1:{L}1", [COLUMN_NAMES])
 
     try:  # delete default worksheet
         default_sheet = await doc.worksheet('Sheet1')
@@ -141,7 +138,7 @@ async def gsheets_save_admin_message(msg: agtypes.Message, tguser) -> None:
     await _insert_row(sheet, row_data, index)
 
 
-async def gsheets_save_user_message(msg: agtypes.Message) -> None:
+async def gsheets_save_user_message(msg: agtypes.Message, highlight: bool=False) -> None:
     """
     Save a message written by User in Google Sheets
     """
@@ -150,5 +147,17 @@ async def gsheets_save_user_message(msg: agtypes.Message) -> None:
     botname = msg.bot.name.lower()
     to_whom = botname if botname.endswith('bot') else f'{botname} bot'
     row_data['to_whom'] = _to_gsheet_text(to_whom)
-
     await _insert_row(sheet, row_data, index)
+
+    if highlight:
+        await format_cells(sheet, f"A{index}:D{index}", ('bold',))
+
+
+async def format_cells(sheet, ranje: str, modes: tuple[str], switch: bool=True):
+    """
+    Shortcut for basic cell format.
+    Modes: bold, italic, underline etc.
+    switch=False desables the chosen formatting mode.
+    """
+    modesdict = {m: switch for m in modes}
+    await sheet.batch_format([{"range": ranje, "format": {"textFormat": modesdict}}])

@@ -18,7 +18,8 @@ async def cmd_start(msg: agtypes.Message) -> None:
     Reply to /start
     """
     await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
-    await save_user_message(msg)
+    user, db = msg.chat, msg.bot.db
+    await save_user_message(msg, new_user=not await db.get_tguser(user=user))
 
 
 async def _group_hello(msg: agtypes.Message):

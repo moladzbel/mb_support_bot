@@ -81,7 +81,7 @@ async def save_admin_message(msg: agtypes.Message, tguser) -> None:
         await gsheets_save_admin_message(msg, tguser)
 
 
-async def save_user_message(msg: agtypes.Message) -> None:
+async def save_user_message(msg: agtypes.Message, new_user: bool=False) -> None:
     """
     Entrypoint for all the mechanisms of saving messages sent by user.
     There is only one currently: Google Sheets.
@@ -89,4 +89,4 @@ async def save_user_message(msg: agtypes.Message) -> None:
     gsheets_cred_file = msg.bot.cfg.get('save_messages_gsheets_cred_file', None)
     gsheets_filename = msg.bot.cfg.get('save_messages_gsheets_filename', None)
     if gsheets_cred_file and gsheets_filename:
-        await gsheets_save_user_message(msg)
+        await gsheets_save_user_message(msg, highlight=new_user)

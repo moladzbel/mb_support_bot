@@ -18,8 +18,7 @@ async def cmd_start(msg: agtypes.Message) -> None:
     Reply to /start
     """
     await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
-    user, db = msg.chat, msg.bot.db
-    await save_user_message(msg, new_user=not await db.get_tguser(user=user))
+    await save_user_message(msg)
 
 
 async def _group_hello(msg: agtypes.Message):
@@ -81,16 +80,21 @@ async def user_message(msg: agtypes.Message) -> None:
     """
     group_id = msg.bot.cfg['admin_group_id']
     user, db = msg.chat, msg.bot.db
-    tguser = await db.get_tguser(user=user) or await _new_topic(msg)
+
+    if tguser := await db.get_tguser(user=user):
+        new_user = False
+    else:
+        tguser = await _new_topic(msg)
+        new_user = True
 
     try:
         await msg.forward(group_id, message_thread_id=tguser.thread_id)
-    except TelegramBadRequest as exc:
+    except TelegramBadRequest as exc:  # the topic vanished
         if 'message thread not found' in exc.message.lower():
             tguser = await _new_topic(msg)
             await msg.forward(group_id, message_thread_id=tguser.thread_id)
 
-    await save_user_message(msg)
+    await save_user_message(msg, new_user=new_user)
 
 
 @log

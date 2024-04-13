@@ -31,7 +31,8 @@ class SupportBot(Bot):
         self._configure_db(self.cfg)
 
         self.menu = load_toml(self._get_botdir() / 'menu.toml')
-        self.menu['answer_text'] = self.cfg['hello_msg']
+        if self.menu:
+            self.menu['answer_text'] = self.cfg['hello_msg']
 
         super().__init__(token, parse_mode=ParseMode.HTML)
 

@@ -28,11 +28,8 @@ class SupportBot(Bot):
         self._logger = logger
 
         token, self.cfg = self._read_config()
-        self._configure_db(self.cfg)
-
-        self.menu = load_toml(self._get_botdir() / 'menu.toml')
-        if self.menu:
-            self.menu['answer_text'] = self.cfg['hello_msg']
+        self._configure_db()
+        self._load_menu()
 
         super().__init__(token, parse_mode=ParseMode.HTML)
 
@@ -64,12 +61,12 @@ class SupportBot(Bot):
         cfg['hello_msg'] += '\n\n<i>The bot created by @moladzbel</i>'
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
-    def _configure_db(self, cfg) -> None:
-        if cfg['db_engine'] == 'memory':
+    def _configure_db(self) -> None:
+        if self.cfg['db_engine'] == 'memory':
             self.db = MemoryDb(self.name)
-            cfg['db_url'] == ''
-        elif cfg['db_engine'] == 'aiosqlite':
-            self.db = SqlDb(self.name, cfg['db_url'])
+            self.cfg['db_url'] == ''
+        elif self.cfg['db_engine'] == 'aiosqlite':
+            self.db = SqlDb(self.name, self.cfg['db_url'])
 
     async def log(self, message: str, level=logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')
@@ -79,7 +76,7 @@ class SupportBot(Bot):
 
     def get_gsheets_creds(self):
         """
-        A callback to work with Google Sheets through gspread_asyncio
+        A callback to work with Google Sheets through gspread_asyncio.
         """
         cred_file = self.cfg.get('save_messages_gsheets_cred_file', None)
         creds = Credentials.from_service_account_file(cred_file)
@@ -89,3 +86,10 @@ class SupportBot(Bot):
             "https://www.googleapis.com/auth/drive",
         ])
         return scoped
+
+    def _load_menu(self) -> None:
+        botdir = self._get_botdir()
+        self.menu = load_toml(botdir / 'menu.toml')
+
+        if self.menu:
+            self.menu['answer_text'] = self.cfg['hello_msg']

@@ -1,3 +1,5 @@
+import html
+
 import aiogram.types as agtypes
 
 from .const import MsgType
@@ -7,7 +9,7 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
     """
     Text representation of a user
     """
-    name = f'<b>{clean_html(user.full_name)}</b>'
+    name = f'<b>{html.escape(user.full_name)}</b>'
     username = f'@{user.username}' if user.username else 'No username'
     userid = f'<b>ID</b>: <code>{user.id}</code>'
     fields = [name, username, userid]
@@ -19,7 +21,7 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
 
     if bot:
         uinfo = await bot.get_chat(user.id)
-        fields.append(f'<b>Bio</b>: {clean_html(uinfo.bio)}' if uinfo.bio else 'No bio')
+        fields.append(f'<b>Bio</b>: {html.escape(uinfo.bio)}' if uinfo.bio else 'No bio')
 
         if uinfo.active_usernames and len(uinfo.active_usernames) > 1:
             fields.append(f'Active usernames: @{", @".join(uinfo.active_usernames)}')
@@ -37,15 +39,9 @@ def make_short_user_info(user: agtypes.User=None, tguser=None) -> str:
         user_id = tguser.user_id
         user = tguser
 
-    fullname = clean_html(user.full_name or '')
+    fullname = html.escape(user.full_name or '')
     tech_part = f'@{user.username}, id {user_id}' if user.username else f'id {user_id}'
     return f'{fullname} ({tech_part})'
-
-
-def clean_html(string: str) -> str:
-    for char in '<>/\\':
-        string = string.replace(char, '')
-    return string
 
 
 def determine_msg_type(msg: agtypes.Message) -> str:

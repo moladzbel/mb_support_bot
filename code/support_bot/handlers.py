@@ -8,6 +8,7 @@ from .filters import (
     ACommandFilter, GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
     ReplyToBotInGroupForwardedFilter,
 )
+from .buttons import button_handler, send_new_msg_with_keyboard
 from .utils import make_user_info
 
 
@@ -17,7 +18,8 @@ async def cmd_start(msg: agtypes.Message) -> None:
     """
     Reply to /start
     """
-    await msg.answer(msg.bot.cfg['hello_msg'], disable_web_page_preview=True)
+    bot, chat = msg.bot, msg.chat
+    await send_new_msg_with_keyboard(bot, chat.id, bot.cfg['hello_msg'], bot.menu)
     await save_user_message(msg)
 
 
@@ -120,3 +122,5 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
     dp.message.register(added_to_group, NewChatMembersFilter())
     dp.message.register(group_chat_created, GroupChatCreatedFilter())
+
+    dp.callback_query.register(button_handler, lambda c: True)

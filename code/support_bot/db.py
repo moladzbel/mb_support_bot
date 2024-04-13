@@ -19,6 +19,7 @@ class TgUsers(Base):
     full_name = sa.Column(sa.String(129))
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
+
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
 

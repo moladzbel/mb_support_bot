@@ -6,6 +6,7 @@ from aiogram import Bot
 from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
+from .buttons import load_toml
 from .db import MemoryDb, SqlDb
 
 
@@ -26,18 +27,24 @@ class SupportBot(Bot):
         self.name = name
         self._logger = logger
 
-        token, cfg = self._read_config()
-        self._configure_db(cfg)
+        token, self.cfg = self._read_config()
+        self._configure_db(self.cfg)
+
+        self.menu = load_toml(self._get_botdir() / 'menu.toml')
+        self.menu['answer_text'] = self.cfg['hello_msg']
 
         super().__init__(token, parse_mode=ParseMode.HTML)
+
+    def _get_botdir(self) -> Path:
+        botdir = BASE_DIR / '..' / 'shared' / self.name
+        botdir.mkdir(parents=True, exist_ok=True)
+        return botdir
 
     def _read_config(self) -> tuple[str, dict]:
         """
         Read a bot token and a config with other vars
         """
-        botdir = BASE_DIR / '..' / 'shared' / self.name
-        botdir.mkdir(parents=True, exist_ok=True)
-
+        botdir = self._get_botdir()
         cfg = {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
@@ -62,8 +69,6 @@ class SupportBot(Bot):
             cfg['db_url'] == ''
         elif cfg['db_engine'] == 'aiosqlite':
             self.db = SqlDb(self.name, cfg['db_url'])
-
-        self.cfg = cfg
 
     async def log(self, message: str, level=logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')

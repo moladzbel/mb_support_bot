@@ -4,3 +4,4 @@ alembic==1.13.1
 gspread-asyncio==2.0.0
 python-dotenv==1.0.1
 SQLAlchemy==2.0.27
+toml==0.10.2

@@ -61,10 +61,17 @@ def get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilde
                 btn = InlineKeyboardButton(text=val['label'], callback_data=cbd)
             builder.row(btn)
 
-    if path:  # TODO: ← button
+    if path:  # build bottom row
+        btns = []
         cbd = CBD(path='', code='', msgid=msgid).pack()
-        btn = InlineKeyboardButton(text='🏠', callback_data=cbd)
-        builder.row(btn)
+        btns.append(InlineKeyboardButton(text='🏠', callback_data=cbd))
+
+        if '.' in path:
+            spl = path.split('.')
+            cbd = CBD(path='.'.join(spl[:-2]), code=spl[-2], msgid=msgid).pack()
+            btns.append(InlineKeyboardButton(text='←', callback_data=cbd))
+
+        builder.row(*btns)
 
     return builder
 

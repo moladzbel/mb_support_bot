@@ -92,4 +92,4 @@ class SupportBot(Bot):
         self.menu = load_toml(botdir / 'menu.toml')
 
         if self.menu:
-            self.menu['answer_text'] = self.cfg['hello_msg']
+            self.menu['answer'] = self.cfg['hello_msg']

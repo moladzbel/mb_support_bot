@@ -31,14 +31,35 @@ class CBD(CallbackData, prefix='_'):
 
 
 class Button:
-    ...  # TODO
+
+    def __init__(self, content):
+        self.content = content
+        self._recognize_mode()
+
+    def _recognize_mode(self) -> None:
+        if 'link' in self.content:
+            self.mode = 'link'
+        elif 'file' in self.content:
+            self.mode = 'file'
+        elif any(['label' in v for v in self.content.values()]):
+            self.mode = 'menu'
+        elif 'answer' in self.content:
+            self.mode = 'answer'
+
+    def as_inline(self, callback_data : str=None) -> InlineKeyboardButton:
+        if self.mode in ('file', 'answer', 'menu'):
+            return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
+        elif self.mode == 'link':
+            return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
+        raise ValueError('Unexpected button mode')
 
 
-def _is_menu_button(dikt: dict) -> bool | None:
-    if isinstance(dikt, dict):
-        is_label = 'label' in dikt
-        is_answer = any([k.startswith('answer_') for k in dikt])
-        return is_label and is_answer
+def _create_button(content):
+    """
+    Button factory
+    """
+    if 'label' in content:
+        return Button(content)
 
 
 def get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilder:
@@ -53,15 +74,11 @@ def get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilde
     builder = InlineKeyboardBuilder()
 
     for key, val in menu.items():
-        if _is_menu_button(val):
-            if link := val.get('answer_link'):
-                btn = InlineKeyboardButton(text=val['label'], url=link)
-            else:
-                cbd = CBD(path=path, code=key, msgid=msgid).pack()
-                btn = InlineKeyboardButton(text=val['label'], callback_data=cbd)
-            builder.row(btn)
+        if btn := _create_button(val):
+            cbd = CBD(path=path, code=key, msgid=msgid).pack()
+            builder.row(btn.as_inline(cbd))
 
-    if path:  # build bottom row
+    if path:  # build bottom row with navigation
         btns = []
         cbd = CBD(path='', code='', msgid=msgid).pack()
         btns.append(InlineKeyboardButton(text='🏠', callback_data=cbd))
@@ -93,7 +110,7 @@ def _find_menu_item(bot, cbd: CallbackData) -> [dict, str]:
 
 async def button_handler(call: agtypes.CallbackQuery):
     """
-    Main entrypoint for a button callbacks.
+    A callback for any button.
     """
     msg = call.message
     bot, chat = msg.bot, msg.chat
@@ -104,13 +121,13 @@ async def button_handler(call: agtypes.CallbackQuery):
         await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
         return
 
-    if _is_menu_button(menuitem):
-        if menuitem.get('answer_menu'):
+    if btn := _create_button(menuitem):
+        if btn.mode == 'menu':
             await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
-        elif answer_attachment := menuitem.get('answer_attachment'):
+        elif btn.mode == 'file':
             ...  # TODO
-        else:
-            await msg.answer(menuitem.get('answer_text'))
+        elif btn.mode == 'answer':
+            await msg.answer(menuitem.get('answer'))
 
     await call.answer()
 
@@ -121,7 +138,7 @@ async def edit_or_send_new_msg_with_keyboard(
     Shortcut to edit a message, or,
     if it's not possible, send a new message.
     """
-    text = menu.get('answer_text') or '👀'
+    text = menu.get('answer') or '👀'
     try:
         markup = get_kb_builder(menu, cbd.msgid, path).as_markup()
         await bot.edit_message_text(chat_id=chat_id, message_id=cbd.msgid, text=text,

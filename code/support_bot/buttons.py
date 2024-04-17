@@ -11,6 +11,8 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from .informing import handle_error, log
+
 
 def load_toml(path: Path) -> dict | None:
     """
@@ -62,7 +64,7 @@ def _create_button(content):
         return Button(content)
 
 
-def get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilder:
+def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilder:
     """
     Constructs an InlineKeyboardBuilder object based on a given menu structure.
     Args:
@@ -108,6 +110,8 @@ def _find_menu_item(bot, cbd: CallbackData) -> [dict, str]:
     return target.get(cbd.code), '.'.join(pathlist)
 
 
+@log
+@handle_error
 async def button_handler(call: agtypes.CallbackQuery):
     """
     A callback for any button.
@@ -116,20 +120,34 @@ async def button_handler(call: agtypes.CallbackQuery):
     bot, chat = msg.bot, msg.chat
     cbd = CBD.unpack(call.data)
     menuitem, path = _find_menu_item(bot, cbd)
+    sentmsg = None
 
-    if not cbd.path and not cbd.code:
-        await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
-        return
+    if not cbd.path and not cbd.code:  # main menu
+        sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
 
-    if btn := _create_button(menuitem):
+    elif btn := _create_button(menuitem):
         if btn.mode == 'menu':
-            await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
+            sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
         elif btn.mode == 'file':
-            ...  # TODO
+            sentmsg = await send_file(bot, chat.id, menuitem)
         elif btn.mode == 'answer':
-            await msg.answer(menuitem.get('answer'))
+            sentmsg = await msg.answer(menuitem['answer'])
 
-    await call.answer()
+    if sentmsg is None:
+        return await call.answer()
+
+
+async def send_file(bot, chat_id: int, menuitem: dict):
+    """
+    Shortcut for sending file on a button press.
+    """
+    fpath = bot.botdir / 'files' / menuitem['file']
+    if fpath.is_file():
+        doc = agtypes.FSInputFile(fpath)
+        return await bot.send_document(chat_id, document=doc, caption=menuitem.get('answer'))
+
+    raise FileNotFoundError(fpath)
+
 
 
 async def edit_or_send_new_msg_with_keyboard(
@@ -140,11 +158,11 @@ async def edit_or_send_new_msg_with_keyboard(
     """
     text = menu.get('answer') or '👀'
     try:
-        markup = get_kb_builder(menu, cbd.msgid, path).as_markup()
-        await bot.edit_message_text(chat_id=chat_id, message_id=cbd.msgid, text=text,
-                                    reply_markup=markup)
+        markup = _get_kb_builder(menu, cbd.msgid, path).as_markup()
+        return await bot.edit_message_text(chat_id=chat_id, message_id=cbd.msgid, text=text,
+                                           reply_markup=markup)
     except TelegramBadRequest:
-        await send_new_msg_with_keyboard(bot, chat_id, text, menu, path)
+        return await send_new_msg_with_keyboard(bot, chat_id, text, menu, path)
 
 
 async def send_new_msg_with_keyboard(
@@ -154,7 +172,7 @@ async def send_new_msg_with_keyboard(
     """
     sentmsg = await bot.send_message(chat_id, text=text, disable_web_page_preview=True)
     if menu:
-        markup = get_kb_builder(menu, sentmsg.message_id, path).as_markup()
+        markup = _get_kb_builder(menu, sentmsg.message_id, path).as_markup()
         await bot.edit_message_text(chat_id=chat_id, message_id=sentmsg.message_id, text=text,
                                     reply_markup=markup)
     return sentmsg

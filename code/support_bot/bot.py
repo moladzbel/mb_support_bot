@@ -27,26 +27,25 @@ class SupportBot(Bot):
         self.name = name
         self._logger = logger
 
+        self.botdir.mkdir(parents=True, exist_ok=True)
         token, self.cfg = self._read_config()
         self._configure_db()
         self._load_menu()
 
         super().__init__(token, parse_mode=ParseMode.HTML)
 
-    def _get_botdir(self) -> Path:
-        botdir = BASE_DIR / '..' / 'shared' / self.name
-        botdir.mkdir(parents=True, exist_ok=True)
-        return botdir
+    @property
+    def botdir(self) -> Path:
+        return BASE_DIR / '..' / 'shared' / self.name
 
     def _read_config(self) -> tuple[str, dict]:
         """
         Read a bot token and a config with other vars
         """
-        botdir = self._get_botdir()
         cfg = {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
-            'db_url': f'sqlite+aiosqlite:///{botdir}/db.sqlite',
+            'db_url': f'sqlite+aiosqlite:///{self.botdir}/db.sqlite',
             'db_engine': 'aiosqlite',
         }
         for var in self.cfg_vars:
@@ -56,7 +55,7 @@ class SupportBot(Bot):
         # convert vars with filenames to actual pathes
         for var in self.botdir_file_cfg_vars:
             if var in cfg:
-                cfg[var] = botdir / cfg[var]
+                cfg[var] = self.botdir / cfg[var]
 
         cfg['hello_msg'] += '\n\n<i>The bot created by @moladzbel</i>'
         return os.getenv(f'{self.name}_TOKEN'), cfg
@@ -88,8 +87,7 @@ class SupportBot(Bot):
         return scoped
 
     def _load_menu(self) -> None:
-        botdir = self._get_botdir()
-        self.menu = load_toml(botdir / 'menu.toml')
+        self.menu = load_toml(self.botdir / 'menu.toml')
 
         if self.menu:
             self.menu['answer'] = self.cfg['hello_msg']

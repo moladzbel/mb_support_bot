@@ -44,7 +44,7 @@ async def _new_topic(msg: agtypes.Message):
 
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
-    tguser = await db.set_tguser(user, thread_id)
+    tguser = await db.set_tguser(user, thread_id, msg)
 
     warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
     text = (await make_user_info(user, bot=bot)) + warn
@@ -84,6 +84,7 @@ async def user_message(msg: agtypes.Message) -> None:
     user, db = msg.chat, msg.bot.db
 
     if tguser := await db.get_tguser(user=user):
+        await db.update_tguser(user, msg)
         new_user = False
     else:
         tguser = await _new_topic(msg)

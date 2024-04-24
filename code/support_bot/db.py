@@ -1,10 +1,11 @@
+from datetime import datetime
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import aiogram.types as agtypes
 import sqlalchemy as sa
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()
@@ -19,6 +20,7 @@ class TgUsers(Base):
     full_name = sa.Column(sa.String(129))
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
+    last_user_msg_at = sa.Column(sa.DateTime)
 
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
@@ -33,6 +35,8 @@ class DbTgUser:
     full_name: str
     username: str
     thread_id: int
+    last_user_msg_at: datetime
+
     banned: bool = False
     shadow_banned: bool = False
 
@@ -47,7 +51,11 @@ class Database:
     async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
         raise NotImplementedError
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
+    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+            ) -> DbTgUser:
+        raise NotImplementedError
+
+    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
         raise NotImplementedError
 
 
@@ -68,12 +76,17 @@ class MemoryDb(Database):
             if v['thread_id'] == thread_id:
                 return k
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
+    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+            ) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
+            last_user_msg_at=msg.date.replace(tzinfo=None),
         )
         self._tgusers[user.id] = tguser
         return tguser
+
+    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
+        self._tgusers[user.id]['last_user_msg_at'] = msg.date.replace(tzinfo=None)
 
 
 class SqlDb(Database):
@@ -96,12 +109,21 @@ class SqlDb(Database):
             if row := result.fetchone():
                 return row
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int) -> DbTgUser:
+    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+            ) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
+            last_user_msg_at=msg.date.replace(tzinfo=None),
         )
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))
             await conn.execute(sa.insert(TgUsers).values(**asdict(tguser)))
 
         return tguser
+
+    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
+        async with create_async_engine(self.url).begin() as conn:
+            await conn.execute(
+                sa.update(TgUsers).where(TgUsers.user_id==user.id).values(
+                    last_user_msg_at=msg.date.replace(tzinfo=None))
+            )

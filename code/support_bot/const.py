@@ -1,3 +1,6 @@
+MSG_TEXT_LIMIT = 4096
+
+
 class MsgType:
     photo = 'photo'
     video = 'video'

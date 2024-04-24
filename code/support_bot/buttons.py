@@ -11,6 +11,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from .const import MSG_TEXT_LIMIT
 from .informing import handle_error, log
 
 
@@ -131,7 +132,8 @@ async def button_handler(call: agtypes.CallbackQuery):
         elif btn.mode == 'file':
             sentmsg = await send_file(bot, chat.id, menuitem)
         elif btn.mode == 'answer':
-            sentmsg = await msg.answer(menuitem['answer'])
+            text = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
+            sentmsg = await msg.answer(text)
 
     if sentmsg is None:
         return await call.answer()
@@ -144,7 +146,8 @@ async def send_file(bot, chat_id: int, menuitem: dict):
     fpath = bot.botdir / 'files' / menuitem['file']
     if fpath.is_file():
         doc = agtypes.FSInputFile(fpath)
-        return await bot.send_document(chat_id, document=doc, caption=menuitem.get('answer'))
+        caption = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
+        return await bot.send_document(chat_id, document=doc, caption=caption)
 
     raise FileNotFoundError(fpath)
 
@@ -156,7 +159,7 @@ async def edit_or_send_new_msg_with_keyboard(
     Shortcut to edit a message, or,
     if it's not possible, send a new message.
     """
-    text = menu.get('answer') or '👀'
+    text = (menu.get('answer') or '')[:MSG_TEXT_LIMIT] or '👀'
     try:
         markup = _get_kb_builder(menu, cbd.msgid, path).as_markup()
         return await bot.edit_message_text(chat_id=chat_id, message_id=cbd.msgid, text=text,

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -48,14 +48,18 @@ class Database:
     def __init__(self, name: str):
         self.name = name
 
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
         raise NotImplementedError
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
             ) -> DbTgUser:
         raise NotImplementedError
 
-    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
+    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
+                            thread_id: int=None):
+        raise NotImplementedError
+
+    async def get_old_tgusers(self):
         raise NotImplementedError
 
 
@@ -68,7 +72,7 @@ class MemoryDb(Database):
         super().__init__(name)
         self._tgusers = {}
 
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
         if user:
             return self._tgusers.get(user.id)
 
@@ -76,17 +80,21 @@ class MemoryDb(Database):
             if v['thread_id'] == thread_id:
                 return k
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
             ) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
-            last_user_msg_at=msg.date.replace(tzinfo=None),
+            last_user_msg_at=user_msg.date.replace(tzinfo=None),
         )
         self._tgusers[user.id] = tguser
         return tguser
 
-    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
-        self._tgusers[user.id]['last_user_msg_at'] = msg.date.replace(tzinfo=None)
+    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
+                            thread_id: int=None):
+        if user_msg:
+            self._tgusers[user.id]['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
+        if thread_id:
+            self._tgusers[user.id]['thread_id'] = thread_id
 
 
 class SqlDb(Database):
@@ -98,22 +106,22 @@ class SqlDb(Database):
         super().__init__(name)
         self.url = url
 
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None) -> int:
-        async with create_async_engine(self.url).begin() as conn:
-            if user:
-                query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
-            else:
-                query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
+    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
+        if user:
+            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
+        else:
+            query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
 
+        async with create_async_engine(self.url).begin() as conn:
             result = await conn.execute(query)
             if row := result.fetchone():
                 return row
 
-    async def set_tguser(self, user: agtypes.User, thread_id: int, msg: agtypes.Message,
+    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
             ) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
-            last_user_msg_at=msg.date.replace(tzinfo=None),
+            last_user_msg_at=user_msg.date.replace(tzinfo=None),
         )
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))
@@ -121,9 +129,26 @@ class SqlDb(Database):
 
         return tguser
 
-    async def update_tguser(self, user: agtypes.User, msg: agtypes.Message):
+    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
+                            thread_id: int=None):
+        vals = {}
+        if user_msg:
+            vals['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
+        if thread_id:
+            vals['thread_id'] = thread_id
+
         async with create_async_engine(self.url).begin() as conn:
-            await conn.execute(
-                sa.update(TgUsers).where(TgUsers.user_id==user.id).values(
-                    last_user_msg_at=msg.date.replace(tzinfo=None))
-            )
+            await conn.execute(sa.update(TgUsers).where(TgUsers.user_id==user.id).values(**vals))
+
+    async def tguser_del_thread_id(self, user_id: int):
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.update(TgUsers).where(TgUsers.user_id==user_id).values(thread_id=None)
+            await conn.execute(query)
+
+    async def get_old_tgusers(self):
+        async with create_async_engine(self.url).begin() as conn:
+            ago = datetime.utcnow() - timedelta(weeks=2)
+            query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)
+
+            result = await conn.execute(query)
+            return result.fetchall()

@@ -11,7 +11,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .const import MSG_TEXT_LIMIT
+from .const import MSG_TEXT_LIMIT, AdminBtn
 from .informing import handle_error, log
 
 
@@ -39,6 +39,9 @@ class Button:
         self.content = content
         self._recognize_mode()
 
+        empty_answer_allowed = self.mode in ('link', 'file')
+        self.answer = _extract_answer(content, empty=empty_answer_allowed)
+
     def _recognize_mode(self) -> None:
         if 'link' in self.content:
             self.mode = 'link'
@@ -55,6 +58,13 @@ class Button:
         elif self.mode == 'link':
             return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
         raise ValueError('Unexpected button mode')
+
+
+def _extract_answer(menu: dict, empty: bool=False) -> str:
+    answer = (menu.get('answer') or '')[:MSG_TEXT_LIMIT]
+    if not empty:
+        answer = answer or '👀'
+    return answer
 
 
 def _create_button(content):
@@ -113,9 +123,9 @@ def _find_menu_item(bot, cbd: CallbackData) -> [dict, str]:
 
 @log
 @handle_error
-async def button_handler(call: agtypes.CallbackQuery):
+async def user_btn_handler(call: agtypes.CallbackQuery):
     """
-    A callback for any button.
+    A callback for any button shown to a user.
     """
     msg = call.message
     bot, chat = msg.bot, msg.chat
@@ -132,11 +142,44 @@ async def button_handler(call: agtypes.CallbackQuery):
         elif btn.mode == 'file':
             sentmsg = await send_file(bot, chat.id, menuitem)
         elif btn.mode == 'answer':
-            text = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
-            sentmsg = await msg.answer(text)
+            sentmsg = await msg.answer(btn.answer)
 
-    if sentmsg is None:
-        return await call.answer()
+    return await call.answer()
+
+
+@log
+@handle_error
+async def admin_btn_handler(call: agtypes.CallbackQuery):
+    """
+    A callback for any button shown in admin group.
+    """
+    cbd = CBD.unpack(call.data)
+
+    if cbd.code == AdminBtn.del_old_topics:
+        await del_old_topics(call)
+
+    return await call.answer()
+
+
+async def del_old_topics(call: agtypes.CallbackQuery):
+    """
+    Admin action - delete topics older than 2 weeks,
+    and delete their thread ids from DB
+    """
+    msg = call.message
+    bot, db = msg.bot, msg.bot.db
+    await msg.answer(bot.admin_menu[AdminBtn.del_old_topics]['answer'])
+
+    i = 0
+    for tguser in await db.get_old_tgusers():
+        if tguser.thread_id:
+            await bot.delete_forum_topic(bot.cfg['admin_group_id'], tguser.thread_id)
+            await db.tguser_del_thread_id(tguser.user_id)
+            i += 1
+
+    emo = '😐' if i == 0 else '🫡'
+    end = '' if i == 1 else 's'
+    await msg.answer(f'Deleted {i} topic{end} {emo}')
 
 
 async def send_file(bot, chat_id: int, menuitem: dict):
@@ -146,11 +189,10 @@ async def send_file(bot, chat_id: int, menuitem: dict):
     fpath = bot.botdir / 'files' / menuitem['file']
     if fpath.is_file():
         doc = agtypes.FSInputFile(fpath)
-        caption = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
+        caption = _extract_answer(menuitem, empty=True)
         return await bot.send_document(chat_id, document=doc, caption=caption)
 
     raise FileNotFoundError(fpath)
-
 
 
 async def edit_or_send_new_msg_with_keyboard(
@@ -159,7 +201,7 @@ async def edit_or_send_new_msg_with_keyboard(
     Shortcut to edit a message, or,
     if it's not possible, send a new message.
     """
-    text = (menu.get('answer') or '')[:MSG_TEXT_LIMIT] or '👀'
+    text = _extract_answer(menu)
     try:
         markup = _get_kb_builder(menu, cbd.msgid, path).as_markup()
         return await bot.edit_message_text(chat_id=chat_id, message_id=cbd.msgid, text=text,

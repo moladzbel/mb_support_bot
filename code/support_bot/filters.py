@@ -44,3 +44,38 @@ class ReplyToBotInGroupForwardedFilter(Filter):
             is_admin_group_2 = to_msg.chat.id == group_id
 
             return by_bot and not_topic_reply and is_admin_group_1 and is_admin_group_2
+
+
+class InAdminGroup(Filter):
+    """
+    Checks that a message posted in the admin group,
+    in General topic (message_thread_id is None)
+    """
+    async def __call__(self, msg: agtypes.Message) -> bool:
+        is_admin_group = msg.chat.id == int(msg.bot.cfg['admin_group_id'])
+        return is_admin_group and not msg.message_thread_id
+
+
+class BotMention(Filter):
+    """
+    Checks it is a bot's mention, only
+    """
+    async def __call__(self, msg: agtypes.Message) -> bool:
+        me = await msg.bot.me()
+        return msg.text == f'@{me.username}'
+
+
+class BtnInAdminGroup(Filter):
+    """
+    Checks that a message posted in the admin group
+    """
+    async def __call__(self, call: agtypes.CallbackQuery) -> bool:
+        msg = call.message
+        return msg.chat.id == int(msg.bot.cfg['admin_group_id'])
+
+
+class BtnInPrivateChat(Filter):
+
+    async def __call__(self, call: agtypes.CallbackQuery) -> bool:
+        msg = call.message
+        return msg.chat.type == ChatType.PRIVATE

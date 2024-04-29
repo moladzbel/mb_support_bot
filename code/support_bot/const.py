@@ -16,3 +16,7 @@ class MsgType:
     poll = 'poll'
     dice = 'dice'
     regular_or_other = 'regular/other'
+
+
+class AdminBtn:
+    del_old_topics = 'del_old_topics'

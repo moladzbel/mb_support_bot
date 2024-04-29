@@ -3,12 +3,13 @@ from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 
+from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
 from .informing import handle_error, log, save_admin_message, save_user_message
 from .filters import (
-    ACommandFilter, GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
+    ACommandFilter, BtnInAdminGroup, BtnInPrivateChat, BotMention, InAdminGroup,
+    GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
     ReplyToBotInGroupForwardedFilter,
 )
-from .buttons import button_handler, send_new_msg_with_keyboard
 from .utils import make_user_info
 
 
@@ -40,17 +41,16 @@ async def _new_topic(msg: agtypes.Message):
     Create a new topic for the user
     """
     group_id = msg.bot.cfg['admin_group_id']
-    user, bot, db = msg.chat, msg.bot, msg.bot.db
+    user, bot = msg.chat, msg.bot
 
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
-    tguser = await db.set_tguser(user, thread_id, msg)
 
     warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
     text = (await make_user_info(user, bot=bot)) + warn
     await bot.send_message(group_id, text, message_thread_id=thread_id)
 
-    return tguser
+    return thread_id
 
 
 @log
@@ -84,20 +84,25 @@ async def user_message(msg: agtypes.Message) -> None:
     user, db = msg.chat, msg.bot.db
 
     if tguser := await db.get_tguser(user=user):
-        await db.update_tguser(user, msg)
-        new_user = False
+        if thread_id := tguser.thread_id:
+            try:
+                await msg.forward(group_id, message_thread_id=thread_id)
+            except TelegramBadRequest as exc:  # the topic vanished for any reason
+                if 'message thread not found' in exc.message.lower():
+                    thread_id = await _new_topic(msg)
+                    await msg.forward(group_id, message_thread_id=thread_id)
+        else:
+            thread_id = await _new_topic(msg)
+            await msg.forward(group_id, message_thread_id=thread_id)
+
+        await db.update_tguser(user, user_msg=msg, thread_id=thread_id)
+        await save_user_message(msg)
+
     else:
-        tguser = await _new_topic(msg)
-        new_user = True
-
-    try:
-        await msg.forward(group_id, message_thread_id=tguser.thread_id)
-    except TelegramBadRequest as exc:  # the topic vanished
-        if 'message thread not found' in exc.message.lower():
-            tguser = await _new_topic(msg)
-            await msg.forward(group_id, message_thread_id=tguser.thread_id)
-
-    await save_user_message(msg, new_user=new_user)
+        thread_id = await _new_topic(msg)
+        await msg.forward(group_id, message_thread_id=thread_id)
+        tguser = await db.set_tguser(user, msg, thread_id)
+        await save_user_message(msg, new_user=True)
 
 
 @log
@@ -114,6 +119,17 @@ async def admin_message(msg: agtypes.Message) -> None:
     await save_admin_message(msg, tguser)
 
 
+@log
+@handle_error
+async def mention_in_admin_group(msg: agtypes.Message):
+    """
+    Report group ID when a group with the bot is created
+    """
+    bot, group = msg.bot, msg.chat
+
+    await send_new_msg_with_keyboard(bot, group.id, 'Choose:', bot.admin_menu)
+
+
 def register_handlers(dp: Dispatcher) -> None:
     """
     Register all the handlers to the provided dispatcher
@@ -121,7 +137,10 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
     dp.message.register(admin_message, ~ACommandFilter(), ReplyToBotInGroupForwardedFilter())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
+
     dp.message.register(added_to_group, NewChatMembersFilter())
     dp.message.register(group_chat_created, GroupChatCreatedFilter())
+    dp.message.register(mention_in_admin_group, BotMention(), InAdminGroup())
 
-    dp.callback_query.register(button_handler, lambda c: True)
+    dp.callback_query.register(user_btn_handler, BtnInPrivateChat())
+    dp.callback_query.register(admin_btn_handler, BtnInAdminGroup())

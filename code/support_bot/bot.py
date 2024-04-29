@@ -7,6 +7,7 @@ from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
 from .buttons import load_toml
+from .const import AdminBtn
 from .db import MemoryDb, SqlDb
 
 
@@ -88,6 +89,13 @@ class SupportBot(Bot):
 
     def _load_menu(self) -> None:
         self.menu = load_toml(self.botdir / 'menu.toml')
-
         if self.menu:
             self.menu['answer'] = self.cfg['hello_msg']
+
+        self.admin_menu = {
+            AdminBtn.del_old_topics: {
+                'label': '❌ Delete topics older than 2 weeks',
+                'answer': ('Deleting topics older than 2 weeks. '
+                           'It can take some time if there are many of them.'),
+            },
+        }

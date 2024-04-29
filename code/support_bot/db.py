@@ -59,42 +59,11 @@ class Database:
                             thread_id: int=None):
         raise NotImplementedError
 
-    async def get_old_tgusers(self):
+    async def tguser_del_thread_id(self, user_id: int):
         raise NotImplementedError
 
-
-class MemoryDb(Database):
-    """
-    A dummy database keeping everything in memory.
-    Suitable for development only - looses data on restart.
-    """
-    def __init__(self, name: str):
-        super().__init__(name)
-        self._tgusers = {}
-
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
-        if user:
-            return self._tgusers.get(user.id)
-
-        for k, v in self._tgusers.items():
-            if v['thread_id'] == thread_id:
-                return k
-
-    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
-            ) -> DbTgUser:
-        tguser = DbTgUser(
-            user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
-            last_user_msg_at=user_msg.date.replace(tzinfo=None),
-        )
-        self._tgusers[user.id] = tguser
-        return tguser
-
-    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
-                            thread_id: int=None):
-        if user_msg:
-            self._tgusers[user.id]['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
-        if thread_id:
-            self._tgusers[user.id]['thread_id'] = thread_id
+    async def get_old_tgusers(self):
+        raise NotImplementedError
 
 
 class SqlDb(Database):

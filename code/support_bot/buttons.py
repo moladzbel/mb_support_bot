@@ -106,11 +106,11 @@ def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuild
     return builder
 
 
-def _find_menu_item(bot, cbd: CallbackData) -> [dict, str]:
+def _find_menu_item(menu: dict, cbd: CallbackData) -> [dict, str]:
     """
     Find a button info in bot menu tree by callback data.
     """
-    target = bot.menu
+    target = menu
     pathlist = []
     for lvlcode in cbd.path.split('.'):
         if lvlcode:
@@ -130,19 +130,18 @@ async def user_btn_handler(call: agtypes.CallbackQuery):
     msg = call.message
     bot, chat = msg.bot, msg.chat
     cbd = CBD.unpack(call.data)
-    menuitem, path = _find_menu_item(bot, cbd)
-    sentmsg = None
+    menuitem, path = _find_menu_item(bot.menu, cbd)
 
     if not cbd.path and not cbd.code:  # main menu
-        sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
+        await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
 
     elif btn := _create_button(menuitem):
         if btn.mode == 'menu':
-            sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
+            await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
         elif btn.mode == 'file':
-            sentmsg = await send_file(bot, chat.id, menuitem)
+            await send_file(bot, chat.id, menuitem)
         elif btn.mode == 'answer':
-            sentmsg = await msg.answer(btn.answer)
+            await msg.answer(btn.answer)
 
     return await call.answer()
 

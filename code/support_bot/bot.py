@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 
 from .buttons import load_toml
 from .const import AdminBtn
-from .db import MemoryDb, SqlDb
+from .db import SqlDb
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -62,10 +62,7 @@ class SupportBot(Bot):
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self) -> None:
-        if self.cfg['db_engine'] == 'memory':
-            self.db = MemoryDb(self.name)
-            self.cfg['db_url'] == ''
-        elif self.cfg['db_engine'] == 'aiosqlite':
+        if self.cfg['db_engine'] == 'aiosqlite':
             self.db = SqlDb(self.name, self.cfg['db_url'])
 
     async def log(self, message: str, level=logging.INFO) -> None:

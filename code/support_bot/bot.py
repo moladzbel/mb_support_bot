@@ -20,7 +20,7 @@ class SupportBot(Bot):
     """
     cfg_vars = (
         'admin_group_id', 'hello_msg', 'db_url', 'db_engine', 'save_messages_gsheets_cred_file',
-        'save_messages_gsheets_filename',
+        'save_messages_gsheets_filename', 'hello_ps',
     )
     botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
@@ -48,9 +48,11 @@ class SupportBot(Bot):
             'hello_msg': 'Hello! Write your message',
             'db_url': f'sqlite+aiosqlite:///{self.botdir}/db.sqlite',
             'db_engine': 'aiosqlite',
+            'hello_ps': '\n\n<i>The bot is created by @moladzbel</i>',
         }
         for var in self.cfg_vars:
-            if envvar := os.getenv(f'{self.name}_{var.upper()}'):
+            envvar = os.getenv(f'{self.name}_{var.upper()}')
+            if envvar is not None:
                 cfg[var] = envvar
 
         # convert vars with filenames to actual pathes
@@ -58,7 +60,7 @@ class SupportBot(Bot):
             if var in cfg:
                 cfg[var] = self.botdir / cfg[var]
 
-        cfg['hello_msg'] += '\n\n<i>The bot created by @moladzbel</i>'
+        cfg['hello_msg'] += cfg['hello_ps']
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self) -> None:

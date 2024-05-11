@@ -81,7 +81,7 @@ class Database:
     async def get_old_tgusers(self):
         raise NotImplementedError
 
-    async def log_action(self, name: str):
+    async def log_action(self, name: str) -> None:
         raise NotImplementedError
 
 
@@ -141,7 +141,7 @@ class SqlDb(Database):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def log_action(self, name: str):
+    async def log_action(self, name: str) -> None:
         async with create_async_engine(self.url).begin() as conn:
             vals = {'name': name, 'date': datetime.date.today(), 'count': 1}
             insert_q = sa.insert(ActionStats).values(vals)
@@ -152,3 +152,13 @@ class SqlDb(Database):
                 await conn.execute(insert_q)
             except IntegrityError as exc:
                 await conn.execute(update_q)
+
+    async def get_logged_actions(self, from_date: datetime.date) -> list:
+        async with create_async_engine(self.url).begin() as conn:
+            query = (
+                sa.select(ActionStats.name, sa.func.sum(ActionStats.count))
+                .where(ActionStats.date >= from_date)
+                .group_by(ActionStats.name)
+            )
+            result = await conn.execute(query)
+            return result.fetchall()

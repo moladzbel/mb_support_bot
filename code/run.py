@@ -8,7 +8,7 @@ import asyncio
 from dotenv import load_dotenv
 from aiogram import Dispatcher
 
-from support_bot import SupportBot, register_handlers
+from support_bot import SupportBot, register_handlers, start_jobs
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -48,10 +48,12 @@ def init_bots():
             BOTS.append(SupportBot(name, logger))
 
 
-async def start_bots() -> None:
+async def start() -> None:
     """
     Create bot instances and run them within a dispatcher
     """
+    await start_jobs(BOTS)
+
     dp = Dispatcher()
     register_handlers(dp)
 
@@ -106,7 +108,7 @@ def main() -> None:
     elif 'migrate' in sys.argv:
         cmd_migrate()
     else:
-        asyncio.run(start_bots())
+        asyncio.run(start())
 
 
 if __name__ == '__main__':

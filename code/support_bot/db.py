@@ -1,11 +1,14 @@
-from datetime import datetime, timedelta
+import datetime
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import aiogram.types as agtypes
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
+
+from .enums import ActionName
 
 
 Base = declarative_base()
@@ -13,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class TgUsers(Base):
-    __tablename__ = "tgusers"
+    __tablename__ = 'tgusers'
 
     id = sa.Column(sa.Integer, primary_key=True, index=True)
     user_id = sa.Column(sa.Integer, index=True, nullable=False)
@@ -26,6 +29,19 @@ class TgUsers(Base):
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
 
 
+class ActionStats(Base):
+    __tablename__ = 'actionstats'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.Enum(ActionName), nullable=False)
+    date = sa.Column(sa.Date)
+    count = sa.Column(sa.Integer, default=0)
+
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'date'),
+    )
+
+
 @dataclass
 class DbTgUser:
     """
@@ -35,7 +51,7 @@ class DbTgUser:
     full_name: str
     username: str
     thread_id: int
-    last_user_msg_at: datetime
+    last_user_msg_at: datetime.datetime
 
     banned: bool = False
     shadow_banned: bool = False
@@ -63,6 +79,9 @@ class Database:
         raise NotImplementedError
 
     async def get_old_tgusers(self):
+        raise NotImplementedError
+
+    async def log_action(self, name: str):
         raise NotImplementedError
 
 
@@ -116,8 +135,20 @@ class SqlDb(Database):
 
     async def get_old_tgusers(self):
         async with create_async_engine(self.url).begin() as conn:
-            ago = datetime.utcnow() - timedelta(weeks=2)
+            ago = datetime.datetime.utcnow() - datetime.timedelta(weeks=2)
             query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)
 
             result = await conn.execute(query)
             return result.fetchall()
+
+    async def log_action(self, name: str):
+        async with create_async_engine(self.url).begin() as conn:
+            vals = {'name': name, 'date': datetime.date.today(), 'count': 1}
+            insert_q = sa.insert(ActionStats).values(vals)
+            update_q = sa.update(ActionStats).values(count=ActionStats.count + 1).where(
+                (ActionStats.name == vals['name']) & (ActionStats.date == vals['date'])
+            )
+            try:
+                await conn.execute(insert_q)
+            except IntegrityError as exc:
+                await conn.execute(update_q)

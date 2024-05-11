@@ -5,13 +5,14 @@ technical informing in chats, writing logs
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
+from .enums import ActionName
 from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
 from .utils import make_short_user_info
 
 
 def log(func):
     """
-    Decorator. Logs action name
+    Decorator. Logs actions
     """
     async def wrapper(msg: agtypes.Message, *args):
         await msg.bot.log(func.__name__)
@@ -86,7 +87,13 @@ async def save_user_message(msg: agtypes.Message, new_user: bool=False) -> None:
     Entrypoint for all the mechanisms of saving messages sent by user.
     There is only one currently: Google Sheets.
     """
-    gsheets_cred_file = msg.bot.cfg.get('save_messages_gsheets_cred_file', None)
-    gsheets_filename = msg.bot.cfg.get('save_messages_gsheets_filename', None)
+    bot = msg.bot
+
+    gsheets_cred_file = bot.cfg.get('save_messages_gsheets_cred_file', None)
+    gsheets_filename = bot.cfg.get('save_messages_gsheets_filename', None)
     if gsheets_cred_file and gsheets_filename:
         await gsheets_save_user_message(msg, highlight=new_user)
+
+    await bot.db.log_action(ActionName.user_message)
+    if new_user:
+        await bot.db.log_action(ActionName.new_user)

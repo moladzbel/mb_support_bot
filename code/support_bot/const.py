@@ -20,3 +20,4 @@ class MsgType:
 
 class AdminBtn:
     del_old_topics = 'del_old_topics'
+    broadcast = 'broadcast'

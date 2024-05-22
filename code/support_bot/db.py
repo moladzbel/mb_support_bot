@@ -84,6 +84,9 @@ class Database:
     async def log_action(self, name: str) -> None:
         raise NotImplementedError
 
+    async def get_logged_actions(self, from_date: datetime.date) -> list:
+        raise NotImplementedError
+
 
 class SqlDb(Database):
     """

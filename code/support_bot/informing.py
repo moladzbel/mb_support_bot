@@ -2,7 +2,6 @@
 A package for system messages:
 technical informing in chats, writing logs
 """
-import asyncio
 import datetime
 
 import aiogram.types as agtypes
@@ -110,9 +109,10 @@ async def stats_to_admin_chat(bots: list) -> None:
     from_date = datetime.date.today() - datetime.timedelta(days=7)
     for bot in bots:
         if results := await bot.db.get_logged_actions(from_date):
-            msg = 'For the last week:\n'
+            msg = 'Last week there were:\n'
             stats = [f'{r[0].value[1]}s: {r[1]}' for r in results]
             msg += '\n'.join(stats)
+            msg += '\n#stats'
             await bot.send_message(bot.cfg['admin_group_id'], msg)
 
 

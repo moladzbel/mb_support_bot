@@ -57,59 +57,24 @@ class DbTgUser:
     shadow_banned: bool = False
 
 
-class Database:
-    """
-    Base class for any Database. It's a Repository pattern.
-    """
-    def __init__(self, name: str):
-        self.name = name
-
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
-        raise NotImplementedError
-
-    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
-            ) -> DbTgUser:
-        raise NotImplementedError
-
-    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
-                            thread_id: int=None):
-        raise NotImplementedError
-
-    async def tguser_del_thread_id(self, user_id: int):
-        raise NotImplementedError
-
-    async def get_old_tgusers(self):
-        raise NotImplementedError
-
-    async def log_action(self, name: str) -> None:
-        raise NotImplementedError
-
-    async def get_logged_actions(self, from_date: datetime.date) -> list:
-        raise NotImplementedError
-
-
-class SqlDb(Database):
+class SqlDb:
     """
     A database which uses SQL through SQLAlchemy.
-    Default choice for production.
     """
-    def __init__(self, name: str, url: str):
-        super().__init__(name)
+    def __init__(self, url: str):
+        self.url = url
+        self.tguser = SqlTgUser(url)
+        self.action = SqlAction(url)
+
+
+class SqlTgUser:
+    """
+    Repository for TgUsers table
+    """
+    def __init__(self, url: str):
         self.url = url
 
-    async def get_tguser(self, user: agtypes.User=None, thread_id: int=None):
-        if user:
-            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
-        else:
-            query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
-
-        async with create_async_engine(self.url).begin() as conn:
-            result = await conn.execute(query)
-            if row := result.fetchone():
-                return row
-
-    async def set_tguser(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int,
-            ) -> DbTgUser:
+    async def add(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
             last_user_msg_at=user_msg.date.replace(tzinfo=None),
@@ -120,8 +85,19 @@ class SqlDb(Database):
 
         return tguser
 
-    async def update_tguser(self, user: agtypes.User, user_msg: agtypes.Message=None,
-                            thread_id: int=None):
+    async def get(self, user: agtypes.User=None, thread_id: int=None):
+        if user:
+            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
+        else:
+            query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
+
+        async with create_async_engine(self.url).begin() as conn:
+            result = await conn.execute(query)
+            if row := result.fetchone():
+                return row
+
+    async def update(self, user: agtypes.User, user_msg: agtypes.Message=None,
+                     thread_id: int=None):
         vals = {}
         if user_msg:
             vals['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
@@ -131,12 +107,12 @@ class SqlDb(Database):
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.update(TgUsers).where(TgUsers.user_id==user.id).values(**vals))
 
-    async def tguser_del_thread_id(self, user_id: int):
+    async def del_thread_id(self, user_id: int) -> None:
         async with create_async_engine(self.url).begin() as conn:
             query = sa.update(TgUsers).where(TgUsers.user_id==user_id).values(thread_id=None)
             await conn.execute(query)
 
-    async def get_old_tgusers(self):
+    async def get_olds(self):
         async with create_async_engine(self.url).begin() as conn:
             ago = datetime.datetime.utcnow() - datetime.timedelta(weeks=2)
             query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)
@@ -144,7 +120,18 @@ class SqlDb(Database):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def log_action(self, name: str) -> None:
+
+class SqlAction:
+    """
+    Repository for ActionStats table
+    """
+    def __init__(self, url: str):
+        self.url = url
+
+    async def add(self, name: str) -> None:
+        """
+        Sum it with the existing action count for today
+        """
         async with create_async_engine(self.url).begin() as conn:
             vals = {'name': name, 'date': datetime.date.today(), 'count': 1}
             insert_q = sa.insert(ActionStats).values(vals)
@@ -156,7 +143,7 @@ class SqlDb(Database):
             except IntegrityError as exc:
                 await conn.execute(update_q)
 
-    async def get_logged_actions(self, from_date: datetime.date) -> list:
+    async def get_grouped(self, from_date: datetime.date) -> list:
         async with create_async_engine(self.url).begin() as conn:
             query = (
                 sa.select(ActionStats.name, sa.func.sum(ActionStats.count))

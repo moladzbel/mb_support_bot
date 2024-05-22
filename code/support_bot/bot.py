@@ -65,7 +65,7 @@ class SupportBot(Bot):
 
     def _configure_db(self) -> None:
         if self.cfg['db_engine'] == 'aiosqlite':
-            self.db = SqlDb(self.name, self.cfg['db_url'])
+            self.db = SqlDb(self.cfg['db_url'])
 
     async def log(self, message: str, level=logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')

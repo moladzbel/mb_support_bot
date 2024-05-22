@@ -52,7 +52,7 @@ async def report_user_ban(msg: agtypes.Message, func) -> None:
     bot = msg.bot
     thread_id = msg.message_thread_id
 
-    if func.__name__ == 'admin_message' and await bot.db.get_tguser(thread_id=thread_id):
+    if func.__name__ == 'admin_message' and await bot.db.tguser.get(thread_id=thread_id):
         group_id = bot.cfg['admin_group_id']
         await bot.send_message(
             group_id, 'The user banned the bot', message_thread_id=thread_id,
@@ -97,9 +97,9 @@ async def save_user_message(msg: agtypes.Message, new_user: bool=False) -> None:
     if gsheets_cred_file and gsheets_filename:
         await gsheets_save_user_message(msg, highlight=new_user)
 
-    await bot.db.log_action(ActionName.user_message)
+    await bot.db.action.add(ActionName.user_message)
     if new_user:
-        await bot.db.log_action(ActionName.new_user)
+        await bot.db.action.add(ActionName.new_user)
 
 
 async def stats_to_admin_chat(bots: list) -> None:
@@ -108,7 +108,7 @@ async def stats_to_admin_chat(bots: list) -> None:
     """
     from_date = datetime.date.today() - datetime.timedelta(days=7)
     for bot in bots:
-        if results := await bot.db.get_logged_actions(from_date):
+        if results := await bot.db.action.get_grouped(from_date):
             msg = 'Last week there were:\n'
             stats = [f'{r[0].value[1]}s: {r[1]}' for r in results]
             msg += '\n'.join(stats)

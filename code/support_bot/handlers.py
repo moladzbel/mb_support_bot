@@ -83,7 +83,7 @@ async def user_message(msg: agtypes.Message) -> None:
     group_id = msg.bot.cfg['admin_group_id']
     user, db = msg.chat, msg.bot.db
 
-    if tguser := await db.get_tguser(user=user):
+    if tguser := await db.tguser.get(user=user):
         if thread_id := tguser.thread_id:
             try:
                 await msg.forward(group_id, message_thread_id=thread_id)
@@ -95,13 +95,13 @@ async def user_message(msg: agtypes.Message) -> None:
             thread_id = await _new_topic(msg)
             await msg.forward(group_id, message_thread_id=thread_id)
 
-        await db.update_tguser(user, user_msg=msg, thread_id=thread_id)
+        await db.tguser.update(user, user_msg=msg, thread_id=thread_id)
         await save_user_message(msg)
 
     else:
         thread_id = await _new_topic(msg)
         await msg.forward(group_id, message_thread_id=thread_id)
-        tguser = await db.set_tguser(user, msg, thread_id)
+        tguser = await db.tguser.add(user, msg, thread_id)
         await save_user_message(msg, new_user=True)
 
 
@@ -113,7 +113,7 @@ async def admin_message(msg: agtypes.Message) -> None:
     """
     db = msg.bot.db
 
-    tguser = await db.get_tguser(thread_id=msg.message_thread_id)
+    tguser = await db.tguser.get(thread_id=msg.message_thread_id)
     await msg.copy_to(tguser.user_id)
 
     await save_admin_message(msg, tguser)

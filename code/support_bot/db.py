@@ -112,7 +112,12 @@ class SqlTgUser:
             query = sa.update(TgUsers).where(TgUsers.user_id==user_id).values(thread_id=None)
             await conn.execute(query)
 
-    async def get_olds(self):
+    async def get_all(self) -> list[tuple]:
+        async with create_async_engine(self.url).begin() as conn:
+            result = await conn.execute(sa.select(TgUsers))
+            return result.fetchall()
+
+    async def get_olds(self) -> list[tuple]:
         async with create_async_engine(self.url).begin() as conn:
             ago = datetime.datetime.utcnow() - datetime.timedelta(weeks=2)
             query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)
@@ -140,7 +145,7 @@ class SqlAction:
             )
             try:
                 await conn.execute(insert_q)
-            except IntegrityError as exc:
+            except IntegrityError:
                 await conn.execute(update_q)
 
     async def get_grouped(self, from_date: datetime.date) -> list:

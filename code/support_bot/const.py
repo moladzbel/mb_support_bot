@@ -21,3 +21,8 @@ class MsgType:
 class AdminBtn:
     del_old_topics = 'del_old_topics'
     broadcast = 'broadcast'
+
+
+class MenuMode:
+    column = 'column'
+    row = 'row'

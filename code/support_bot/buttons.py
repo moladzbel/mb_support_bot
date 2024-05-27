@@ -11,8 +11,8 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .admin_actions import del_old_topics
-from .const import MSG_TEXT_LIMIT, AdminBtn
+from .admin_actions import admin_broadcast_start, del_old_topics
+from .const import MSG_TEXT_LIMIT, AdminBtn, MenuMode
 from .informing import handle_error, log
 
 
@@ -35,7 +35,9 @@ class CBD(CallbackData, prefix='_'):
 
 
 class Button:
-
+    """
+    Wrapper over an inline keyboard button
+    """
     def __init__(self, content):
         self.content = content
         self._recognize_mode()
@@ -78,7 +80,7 @@ def _create_button(content):
 
 def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuilder:
     """
-    Constructs an InlineKeyboardBuilder object based on a given menu structure.
+    Construct an InlineKeyboardBuilder object based on a given menu structure.
     Args:
         menu (dict): A dict with menu items to display.
         msgid (int): message_id to place into callback data.
@@ -90,7 +92,10 @@ def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuild
     for key, val in menu.items():
         if btn := _create_button(val):
             cbd = CBD(path=path, code=key, msgid=msgid).pack()
-            builder.row(btn.as_inline(cbd))
+            if menu.get('menumode') == MenuMode.row:
+                builder.button(text=btn.content['label'], callback_data=cbd)
+            else:
+                builder.row(btn.as_inline(cbd))
 
     if path:  # build bottom row with navigation
         btns = []
@@ -124,7 +129,7 @@ def _find_menu_item(menu: dict, cbd: CallbackData) -> [dict, str]:
 
 @log
 @handle_error
-async def user_btn_handler(call: agtypes.CallbackQuery):
+async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     """
     A callback for any button shown to a user.
     """
@@ -149,7 +154,7 @@ async def user_btn_handler(call: agtypes.CallbackQuery):
 
 @log
 @handle_error
-async def admin_btn_handler(call: agtypes.CallbackQuery):
+async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     """
     A callback for any button shown in admin group.
     """
@@ -157,6 +162,8 @@ async def admin_btn_handler(call: agtypes.CallbackQuery):
 
     if cbd.code == AdminBtn.del_old_topics:
         await del_old_topics(call)
+    elif cbd.code == AdminBtn.broadcast:
+        await admin_broadcast_start(call, kwargs['dispatcher'])
 
     return await call.answer()
 
@@ -200,3 +207,15 @@ async def send_new_msg_with_keyboard(
         await bot.edit_message_text(chat_id=chat_id, message_id=sentmsg.message_id, text=text,
                                     reply_markup=markup)
     return sentmsg
+
+
+def build_confirm_menu(yes_answer: str='Confirmed', no_answer: str='Canceled') -> dict:
+    """
+    Shortcut to build typical confirmation keyboard
+    """
+    menu = {
+        'yes': {'label': '✅ Yes', 'answer': yes_answer},
+        'no': {'label': '🚫 No', 'answer': no_answer},
+        'menumode': MenuMode.row,
+    }
+    return menu

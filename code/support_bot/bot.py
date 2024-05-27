@@ -92,9 +92,9 @@ class SupportBot(Bot):
             self.menu['answer'] = self.cfg['hello_msg']
 
         self.admin_menu = {
-            AdminBtn.del_old_topics: {
-                'label': '❌ Delete topics older than 2 weeks',
-                'answer': ('Deleting topics older than 2 weeks. '
-                           'It can take some time if there are many of them.'),
-            },
+            AdminBtn.broadcast: {'label': '📢 Broadcast to all subscribers',
+                                 'answer': ("Send here a message to broadcast, and then I'll ask "
+                                            "for confirmation")},
+            AdminBtn.del_old_topics: {'label': '🧹 Delete topics older than 2 weeks',
+                                      'answer': ('Deleting topics older than 2 weeks...')},
         }

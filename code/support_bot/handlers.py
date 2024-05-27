@@ -3,6 +3,7 @@ from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 
+from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
 from .informing import handle_error, log, save_admin_message, save_user_message
 from .filters import (
@@ -15,7 +16,7 @@ from .utils import make_user_info
 
 @log
 @handle_error
-async def cmd_start(msg: agtypes.Message) -> None:
+async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Reply to /start
     """
@@ -55,7 +56,7 @@ async def _new_topic(msg: agtypes.Message):
 
 @log
 @handle_error
-async def added_to_group(msg: agtypes.Message):
+async def added_to_group(msg: agtypes.Message, *args, **kwargs):
     """
     Report group ID when added to a group
     """
@@ -67,7 +68,7 @@ async def added_to_group(msg: agtypes.Message):
 
 @log
 @handle_error
-async def group_chat_created(msg: agtypes.Message):
+async def group_chat_created(msg: agtypes.Message, *args, **kwargs):
     """
     Report group ID when a group with the bot is created
     """
@@ -76,7 +77,7 @@ async def group_chat_created(msg: agtypes.Message):
 
 @log
 @handle_error
-async def user_message(msg: agtypes.Message) -> None:
+async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Forward user message to internal admin group
     """
@@ -87,8 +88,8 @@ async def user_message(msg: agtypes.Message) -> None:
         if thread_id := tguser.thread_id:
             try:
                 await msg.forward(group_id, message_thread_id=thread_id)
-            except TelegramBadRequest as exc:  # the topic vanished for any reason
-                if 'message thread not found' in exc.message.lower():
+            except TelegramBadRequest as exc:  # the topic vanished for whatever reason
+                if 'thread not found' in exc.message.lower():
                     thread_id = await _new_topic(msg)
                     await msg.forward(group_id, message_thread_id=thread_id)
         else:
@@ -107,7 +108,7 @@ async def user_message(msg: agtypes.Message) -> None:
 
 @log
 @handle_error
-async def admin_message(msg: agtypes.Message) -> None:
+async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Copy admin reply to a user
     """
@@ -121,7 +122,7 @@ async def admin_message(msg: agtypes.Message) -> None:
 
 @log
 @handle_error
-async def mention_in_admin_group(msg: agtypes.Message):
+async def mention_in_admin_group(msg: agtypes.Message, *args, **kwargs):
     """
     Report group ID when a group with the bot is created
     """
@@ -141,6 +142,9 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(added_to_group, NewChatMembersFilter())
     dp.message.register(group_chat_created, GroupChatCreatedFilter())
     dp.message.register(mention_in_admin_group, BotMention(), InAdminGroup())
+
+    dp.message.register(admin_broadcast_ask_confirm, BroadcastForm.message)
+    dp.callback_query.register(admin_broadcast_finish, BroadcastForm.confirm, BtnInAdminGroup())
 
     dp.callback_query.register(user_btn_handler, BtnInPrivateChat())
     dp.callback_query.register(admin_btn_handler, BtnInAdminGroup())

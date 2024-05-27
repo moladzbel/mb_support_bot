@@ -29,7 +29,7 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
     return '\n\n'.join(fields)
 
 
-def make_short_user_info(user: agtypes.User=None, tguser=None) -> str:
+def make_short_user_info(user: agtypes.User | None=None, tguser=None) -> str:
     """
     Short text representation of a user
     """

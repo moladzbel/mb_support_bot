@@ -17,9 +17,9 @@ def log(func):
     """
     Decorator. Logs actions
     """
-    async def wrapper(msg: agtypes.Message, *args):
+    async def wrapper(msg: agtypes.Message, *args, **kwargs):
         await msg.bot.log(func.__name__)
-        return await func(msg, *args)
+        return await func(msg, *args, **kwargs)
 
     wrapper.__name__ = func.__name__
     return wrapper
@@ -29,9 +29,9 @@ def handle_error(func):
     """
     Decorator. Processes any exception in a handler
     """
-    async def wrapper(msg: agtypes.Message, *args):
+    async def wrapper(msg: agtypes.Message, *args, **kwargs):
         try:
-            return await func(msg, *args)
+            return await func(msg, *args, **kwargs)
         except TelegramForbiddenError:
             await report_user_ban(msg, func)
         except TelegramBadRequest as exc:

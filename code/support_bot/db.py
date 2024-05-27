@@ -149,10 +149,25 @@ class SqlAction:
                 await conn.execute(update_q)
 
     async def get_grouped(self, from_date: datetime.date) -> list:
+        """
+        Statistics over time starting from "from_date"
+        """
         async with create_async_engine(self.url).begin() as conn:
             query = (
                 sa.select(ActionStats.name, sa.func.sum(ActionStats.count))
                 .where(ActionStats.date >= from_date)
+                .group_by(ActionStats.name)
+            )
+            result = await conn.execute(query)
+            return result.fetchall()
+
+    async def get_total(self) -> list:
+        """
+        Statistics over entire bot existence time
+        """
+        async with create_async_engine(self.url).begin() as conn:
+            query = (
+                sa.select(ActionStats.name, sa.func.sum(ActionStats.count))
                 .group_by(ActionStats.name)
             )
             result = await conn.execute(query)

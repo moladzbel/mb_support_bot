@@ -108,12 +108,21 @@ async def stats_to_admin_chat(bots: list) -> None:
     """
     from_date = datetime.date.today() - datetime.timedelta(days=7)
     for bot in bots:
+
+        msg = '<b>In the past week, there have been:</b>\n'
         if results := await bot.db.action.get_grouped(from_date):
-            msg = 'Last week there were:\n'
-            stats = [f'{r[0].value[1]}s: {r[1]}' for r in results]
-            msg += '\n'.join(stats)
-            msg += '\n#stats'
-            await bot.send_message(bot.cfg['admin_group_id'], msg)
+            msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
+        else:
+            msg += 'Nothing ¯\_(ツ)_/¯\n'
+
+        msg += '\n<b>From the beginning, there have been:</b>\n'
+        if results := await bot.db.action.get_total():
+            msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
+        else:
+            msg += 'Nothing yet ¯\_(ツ)_/¯\n'
+
+        msg += '\n#stats'
+        await bot.send_message(bot.cfg['admin_group_id'], msg)
 
 
 async def start_jobs(bots: list) -> None:

@@ -12,7 +12,7 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .admin_actions import admin_broadcast_start, del_old_topics
-from .const import MSG_TEXT_LIMIT, AdminBtn, MenuMode
+from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
 
 
@@ -42,23 +42,23 @@ class Button:
         self.content = content
         self._recognize_mode()
 
-        empty_answer_allowed = self.mode in ('link', 'file')
+        empty_answer_allowed = self.mode in (ButtonMode.link, ButtonMode.file)
         self.answer = _extract_answer(content, empty=empty_answer_allowed)
 
     def _recognize_mode(self) -> None:
         if 'link' in self.content:
-            self.mode = 'link'
+            self.mode = ButtonMode.link
         elif 'file' in self.content:
-            self.mode = 'file'
+            self.mode = ButtonMode.file
         elif any(['label' in v for v in self.content.values()]):
-            self.mode = 'menu'
+            self.mode = ButtonMode.menu
         elif 'answer' in self.content:
-            self.mode = 'answer'
+            self.mode = ButtonMode.answer
 
     def as_inline(self, callback_data : str=None) -> InlineKeyboardButton:
-        if self.mode in ('file', 'answer', 'menu'):
+        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu):
             return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
-        elif self.mode == 'link':
+        elif self.mode == ButtonMode.link:
             return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
         raise ValueError('Unexpected button mode')
 
@@ -142,11 +142,11 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
         await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
 
     elif btn := _create_button(menuitem):
-        if btn.mode == 'menu':
+        if btn.mode == ButtonMode.menu:
             await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
-        elif btn.mode == 'file':
+        elif btn.mode == ButtonMode.file:
             await send_file(bot, chat.id, menuitem)
-        elif btn.mode == 'answer':
+        elif btn.mode == ButtonMode.answer:
             await msg.answer(btn.answer)
 
     return await call.answer()

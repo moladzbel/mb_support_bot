@@ -23,6 +23,14 @@ class AdminBtn:
     broadcast = 'broadcast'
 
 
+class ButtonMode:
+    link = 'link'  # open a link
+    file = 'file'  # send a file
+    menu = 'menu'  # open another menu
+    answer = 'answer'  # send an answer message
+    matter = 'matter'  # set a subject matter
+
+
 class MenuMode:
     column = 'column'
     row = 'row'

@@ -104,7 +104,7 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
         users = await bot.db.tguser.get_all()
         for user in users:
             try:
-                await bot.copy_message(user[1], from_chat_id=msg.chat.id,
+                await bot.copy_message(user.user_id, from_chat_id=msg.chat.id,
                                        message_id=state_data['message'])
                 i += 1
             except TelegramBadRequest:

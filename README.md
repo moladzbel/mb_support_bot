@@ -28,6 +28,7 @@ SQLite databases and logs are in `shared/` dir.
 - Create venv: `python3 -m venv .venv`
 - Activate the venv: `. .venv/bin/activate`
 - Install dependencies: `pip install -r requirements.txt`
+- `cd code/`
 - Migrate databases `python3 run.py migrate`
 - Run the bots with `python3 run.py`
 

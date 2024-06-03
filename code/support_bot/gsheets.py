@@ -17,7 +17,7 @@ from .utils import determine_msg_type, make_short_user_info
 
 CLIENT = None
 CLIENT_MANAGER = None
-COLUMN_NAMES = 'When, UTC', 'Type', 'Who', 'To whom', 'Text', 'Filename', 'Forward', 'Matter'
+COLUMN_NAMES = 'When, UTC', 'Type', 'Who', 'To whom', 'Text', 'Filename', 'Forward', 'Subject'
 LAST_COLUMN_SHEET_LETTER = string.ascii_uppercase[len(COLUMN_NAMES) - 1]
 
 
@@ -50,7 +50,7 @@ def _msg_to_row_data(msg: agtypes.Message) -> dict:
     """
     Convert message to Google Sheets fields.
     Fields different for admin and user are ommited or empty
-    (to_whom, matter).
+    (to_whom, subject).
     """
     when = msg.date.strftime('%Y-%m-%d %H:%M:%S')
     typ = determine_msg_type(msg)
@@ -71,7 +71,7 @@ def _msg_to_row_data(msg: agtypes.Message) -> dict:
             'text': _to_gsheet_text(text),
             'filename': _to_gsheet_text(filename),
             'forward': forward,
-            'matter': ''}
+            'subject': ''}
 
 
 async def _ensure_worksheet(doc):
@@ -126,7 +126,7 @@ async def _insert_row(sheet: AsyncioGspreadWorksheet, rd: dict, index: int) -> N
     Insert row field in right order into provided worksheet
     """
     row = (rd['when'], rd['type'], rd['who'], rd['to_whom'], rd['text'], rd['filename'],
-           rd['forward'], rd['matter'])
+           rd['forward'], rd['subject'])
     await sheet.insert_row(row, index=index, value_input_option=ValueInputOption.user_entered)
 
 
@@ -148,7 +148,7 @@ async def gsheets_save_user_message(msg: agtypes.Message, highlight: bool=False)
     botname = msg.bot.name.lower()
     to_whom = botname if botname.endswith('bot') else f'{botname} bot'
     row_data['to_whom'] = _to_gsheet_text(to_whom)
-    row_data['matter'] = (await msg.bot.db.tguser.get(user=msg.from_user)).matter
+    row_data['subject'] = (await msg.bot.db.tguser.get(user=msg.from_user)).subject
     await _insert_row(sheet, row_data, index)
 
     if highlight:

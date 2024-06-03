@@ -52,13 +52,13 @@ class Button:
             self.mode = ButtonMode.file
         elif any(['label' in v for v in self.content.values()]):
             self.mode = ButtonMode.menu
-        elif 'matter' in self.content:
-            self.mode = ButtonMode.matter
+        elif 'subject' in self.content:
+            self.mode = ButtonMode.subject
         elif 'answer' in self.content:
             self.mode = ButtonMode.answer
 
     def as_inline(self, callback_data : str | None=None) -> InlineKeyboardButton:
-        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu, ButtonMode.matter):
+        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu, ButtonMode.subject):
             return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
         elif self.mode == ButtonMode.link:
             return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
@@ -150,8 +150,8 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
             await send_file(bot, chat.id, menuitem)
         elif btn.mode == ButtonMode.answer:
             await msg.answer(btn.answer)
-        elif btn.mode == ButtonMode.matter:
-            await set_matter(bot, chat.id, menuitem)
+        elif btn.mode == ButtonMode.subject:
+            await set_subject(bot, chat.id, menuitem)
 
     return await call.answer()
 
@@ -185,14 +185,14 @@ async def send_file(bot, chat_id: int, menuitem: dict):
     raise FileNotFoundError(fpath)
 
 
-async def set_matter(bot, chat_id: int, menuitem: dict):
+async def set_subject(bot, chat_id: int, menuitem: dict):
     """
-    Set the chosen matter to the user and report that.
+    Set the chosen subject to the user and report that.
     """
     answer = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
     answer = answer or f'Please write your question about "{menuitem["label"]}"'
 
-    await bot.db.tguser.update(chat_id, matter=menuitem['matter'])
+    await bot.db.tguser.update(chat_id, subject=menuitem['subject'])
     await bot.send_message(chat_id, text=answer)
 
 

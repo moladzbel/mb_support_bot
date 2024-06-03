@@ -25,7 +25,7 @@ class TgUsers(Base):
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
     last_user_msg_at = sa.Column(sa.DateTime)
-    matter = sa.Column(sa.String(32))
+    subject = sa.Column(sa.String(32))
 
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
@@ -108,7 +108,7 @@ class SqlTgUser:
                      user_msg: agtypes.Message | None = None,
                      **kwargs) -> None:
         """
-        Update TgUser fields (thread_id, matter, etc) provided as kwargs.
+        Update TgUser fields (thread_id, subject, etc) provided as kwargs.
         if user_msg provided, set it's date to last_user_msg_at field.
         """
         if user_msg:

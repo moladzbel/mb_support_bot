@@ -50,7 +50,7 @@ class Button:
             self.mode = ButtonMode.link
         elif 'file' in self.content:
             self.mode = ButtonMode.file
-        elif any(['label' in v for v in self.content.values()]):
+        elif any([isinstance(v, dict) and 'label' in v for v in self.content.values()]):
             self.mode = ButtonMode.menu
         elif 'subject' in self.content:
             self.mode = ButtonMode.subject
@@ -172,7 +172,7 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     return await call.answer()
 
 
-async def send_file(bot, chat_id: int, menuitem: dict):
+async def send_file(bot, chat_id: int, menuitem: dict) -> agtypes.Message:
     """
     Shortcut for sending a file on a button press.
     """
@@ -182,10 +182,10 @@ async def send_file(bot, chat_id: int, menuitem: dict):
         caption = _extract_answer(menuitem, empty=True)
         return await bot.send_document(chat_id, document=doc, caption=caption)
 
-    raise FileNotFoundError(fpath)
+    raise FileNotFoundError(fpath.resolve())
 
 
-async def set_subject(bot, chat_id: int, menuitem: dict):
+async def set_subject(bot, chat_id: int, menuitem: dict) -> None:
     """
     Set the chosen subject to the user and report that.
     """

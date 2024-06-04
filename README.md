@@ -21,16 +21,6 @@ Support bot for Telegram based on aiogram, SQLAlchemy, and Alembic. Allows to ru
 
 SQLite databases and logs are in `shared/` dir.
 
-## Run natively in local environment
-
-- `cd mb_support_bot`
-- `cp .env.example .env`, fill the variables in the `.env` file
-- Create venv: `python3 -m venv .venv`
-- Activate the venv: `. .venv/bin/activate`
-- Install dependencies: `pip install -r requirements.txt`
-- Migrate databases `python3 run.py migrate`
-- Run the bots with `python3 run.py`
-
 ## System commands
 
 - Statically check the code: `ruff check .` (`pip install ruff` for the first time)

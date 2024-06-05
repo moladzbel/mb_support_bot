@@ -44,6 +44,20 @@ class ActionStats(Base):
     )
 
 
+class MessagesToDelete(Base):
+    __tablename__ = 'messages_to_delete'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    chat_id = sa.Column(sa.Integer, nullable=False)
+    msg_id = sa.Column(sa.Integer, nullable=False)
+    sent_at = sa.Column(sa.DateTime, nullable=False)
+    by_bot = sa.Column(sa.Boolean, nullable=False)
+
+    __table_args__ = (
+        sa.UniqueConstraint('chat_id', 'msg_id'),
+    )
+
+
 @dataclass
 class DbTgUser:
     """

@@ -107,8 +107,8 @@ async def stats_to_admin_chat(bots: list) -> None:
     Report bot stats in admin group
     """
     from_date = datetime.date.today() - datetime.timedelta(days=7)
-    for bot in bots:
 
+    for bot in bots:
         msg = '<b>In the past week, there have been:</b>\n'
         if results := await bot.db.action.get_grouped(from_date):
             msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'

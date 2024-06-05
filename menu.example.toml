@@ -1,0 +1,42 @@
+[some_reply]
+label = "Text reply"
+answer = "Here is a text reply"
+
+[some_submenu]
+label = "Submenu"
+answer = "Text reply for a submenu"
+
+[some_doc]
+label = "Send a document"
+file = "document.txt"  # Comment: the file must reside in shared/{BOT_DIR}/files/{FILENAME}
+answer = "Reply caption for the document"
+
+[choose_subject]
+label = "Choose subject"
+answer = "Sets a subject user wants to talk about"
+
+[some_link]
+label = "Button with a link"
+link = "https://moladzbel.org/"
+
+
+# Submenu buttons
+
+[some_submenu.btn1]
+label = "First button in a submenu"
+answer = "Reply to the first button press"
+
+[some_submenu.btn2]
+label = "Second button in a submenu"
+answer = "Reply to the second button press"
+
+
+[choose_subject.subject_a]
+label = "Subject A label"
+subject = "Subject A"
+answer = "Subject A is chosen"
+
+[choose_subject.subject_b]
+label = "Subject B"
+subject = "Subject B"
+answer = "Subject B is chosen"

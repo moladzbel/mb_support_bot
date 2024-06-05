@@ -4,6 +4,7 @@ from pathlib import Path
 
 import aiogram.types as agtypes
 import sqlalchemy as sa
+from sqlalchemy.engine.row import Row as SaRow
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -24,7 +25,7 @@ class TgUsers(Base):
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
     last_user_msg_at = sa.Column(sa.DateTime)
-    matter = sa.Column(sa.String(32))
+    subject = sa.Column(sa.String(32))
 
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
@@ -75,7 +76,10 @@ class SqlTgUser:
     def __init__(self, url: str):
         self.url = url
 
-    async def add(self, user: agtypes.User, user_msg: agtypes.Message, thread_id: int) -> DbTgUser:
+    async def add(self,
+                  user: agtypes.User,
+                  user_msg: agtypes.Message,
+                  thread_id: int | None = None) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
             last_user_msg_at=user_msg.date.replace(tzinfo=None),
@@ -86,7 +90,9 @@ class SqlTgUser:
 
         return tguser
 
-    async def get(self, user: agtypes.User=None, thread_id: int=None):
+    async def get(self,
+                  user: agtypes.User | None = None,
+                  thread_id: int | None = None) -> SaRow | None:
         if user:
             query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
         else:
@@ -97,28 +103,31 @@ class SqlTgUser:
             if row := result.fetchone():
                 return row
 
-    async def update(self, user: agtypes.User, user_msg: agtypes.Message=None,
-                     thread_id: int=None):
-        vals = {}
+    async def update(self,
+                     user_id: int,
+                     user_msg: agtypes.Message | None = None,
+                     **kwargs) -> None:
+        """
+        Update TgUser fields (thread_id, subject, etc) provided as kwargs.
+        if user_msg provided, set it's date to last_user_msg_at field.
+        """
         if user_msg:
-            vals['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
-        if thread_id:
-            vals['thread_id'] = thread_id
+            kwargs['last_user_msg_at'] = user_msg.date.replace(tzinfo=None)
 
         async with create_async_engine(self.url).begin() as conn:
-            await conn.execute(sa.update(TgUsers).where(TgUsers.user_id==user.id).values(**vals))
+            await conn.execute(sa.update(TgUsers).where(TgUsers.user_id==user_id).values(**kwargs))
 
     async def del_thread_id(self, user_id: int) -> None:
         async with create_async_engine(self.url).begin() as conn:
             query = sa.update(TgUsers).where(TgUsers.user_id==user_id).values(thread_id=None)
             await conn.execute(query)
 
-    async def get_all(self) -> list[tuple]:
+    async def get_all(self) -> list[SaRow]:
         async with create_async_engine(self.url).begin() as conn:
             result = await conn.execute(sa.select(TgUsers))
             return result.fetchall()
 
-    async def get_olds(self) -> list[tuple]:
+    async def get_olds(self) -> list[SaRow]:
         async with create_async_engine(self.url).begin() as conn:
             ago = datetime.datetime.utcnow() - datetime.timedelta(weeks=2)
             query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)

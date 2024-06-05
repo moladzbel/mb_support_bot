@@ -5,7 +5,7 @@ import aiogram.types as agtypes
 from .const import MsgType
 
 
-async def make_user_info(user: agtypes.User, bot=None) -> str:
+async def make_user_info(user: agtypes.User, bot=None, tguser=None) -> str:
     """
     Text representation of a user
     """
@@ -25,6 +25,9 @@ async def make_user_info(user: agtypes.User, bot=None) -> str:
 
         if uinfo.active_usernames and len(uinfo.active_usernames) > 1:
             fields.append(f'Active usernames: @{", @".join(uinfo.active_usernames)}')
+
+    if tguser and tguser.subject:
+        fields.append(f'<b>Subject</b>: {tguser.subject}')
 
     return '\n\n'.join(fields)
 

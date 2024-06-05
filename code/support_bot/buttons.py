@@ -50,13 +50,15 @@ class Button:
             self.mode = ButtonMode.link
         elif 'file' in self.content:
             self.mode = ButtonMode.file
-        elif any(['label' in v for v in self.content.values()]):
+        elif any([isinstance(v, dict) and 'label' in v for v in self.content.values()]):
             self.mode = ButtonMode.menu
+        elif 'subject' in self.content:
+            self.mode = ButtonMode.subject
         elif 'answer' in self.content:
             self.mode = ButtonMode.answer
 
-    def as_inline(self, callback_data : str=None) -> InlineKeyboardButton:
-        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu):
+    def as_inline(self, callback_data : str | None=None) -> InlineKeyboardButton:
+        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu, ButtonMode.subject):
             return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
         elif self.mode == ButtonMode.link:
             return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
@@ -148,6 +150,8 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
             await send_file(bot, chat.id, menuitem)
         elif btn.mode == ButtonMode.answer:
             await msg.answer(btn.answer)
+        elif btn.mode == ButtonMode.subject:
+            await set_subject(bot, chat.id, menuitem)
 
     return await call.answer()
 
@@ -168,7 +172,7 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     return await call.answer()
 
 
-async def send_file(bot, chat_id: int, menuitem: dict):
+async def send_file(bot, chat_id: int, menuitem: dict) -> agtypes.Message:
     """
     Shortcut for sending a file on a button press.
     """
@@ -178,7 +182,18 @@ async def send_file(bot, chat_id: int, menuitem: dict):
         caption = _extract_answer(menuitem, empty=True)
         return await bot.send_document(chat_id, document=doc, caption=caption)
 
-    raise FileNotFoundError(fpath)
+    raise FileNotFoundError(fpath.resolve())
+
+
+async def set_subject(bot, chat_id: int, menuitem: dict) -> None:
+    """
+    Set the chosen subject to the user and report that.
+    """
+    answer = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
+    answer = answer or f'Please write your question about "{menuitem["label"]}"'
+
+    await bot.db.tguser.update(chat_id, subject=menuitem['subject'])
+    await bot.send_message(chat_id, text=answer)
 
 
 async def edit_or_send_new_msg_with_keyboard(

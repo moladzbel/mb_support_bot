@@ -20,8 +20,13 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Reply to /start
     """
-    bot, chat = msg.bot, msg.chat
-    await send_new_msg_with_keyboard(bot, chat.id, bot.cfg['hello_msg'], bot.menu)
+    bot, user, db = msg.bot, msg.chat, msg.bot.db
+
+    await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
+
+    if not await db.tguser.get(user=user):
+        await db.tguser.add(user, msg)
+
     await save_user_message(msg)
 
 
@@ -37,7 +42,7 @@ async def _group_hello(msg: agtypes.Message):
     await msg.bot.send_message(group.id, text)
 
 
-async def _new_topic(msg: agtypes.Message):
+async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     """
     Create a new topic for the user
     """
@@ -47,10 +52,10 @@ async def _new_topic(msg: agtypes.Message):
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
 
-    warn = '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
-    text = (await make_user_info(user, bot=bot)) + warn
-    await bot.send_message(group_id, text, message_thread_id=thread_id)
+    text = await make_user_info(user, bot=bot, tguser=tguser)
+    text += '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
 
+    await bot.send_message(group_id, text, message_thread_id=thread_id)
     return thread_id
 
 
@@ -90,13 +95,13 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
                 await msg.forward(group_id, message_thread_id=thread_id)
             except TelegramBadRequest as exc:  # the topic vanished for whatever reason
                 if 'thread not found' in exc.message.lower():
-                    thread_id = await _new_topic(msg)
+                    thread_id = await _new_topic(msg, tguser=tguser)
                     await msg.forward(group_id, message_thread_id=thread_id)
         else:
-            thread_id = await _new_topic(msg)
+            thread_id = await _new_topic(msg, tguser=tguser)
             await msg.forward(group_id, message_thread_id=thread_id)
 
-        await db.tguser.update(user, user_msg=msg, thread_id=thread_id)
+        await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
         await save_user_message(msg)
 
     else:

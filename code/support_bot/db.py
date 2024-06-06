@@ -81,15 +81,21 @@ class SqlDb:
         self.url = url
         self.tguser = SqlTgUser(url)
         self.action = SqlAction(url)
+        self.msgtodel = SqlMessageToDelete(url)
 
 
-class SqlTgUser:
+class SqlRepo:
     """
-    Repository for TgUsers table
+    Repository for a table
     """
     def __init__(self, url: str):
         self.url = url
 
+
+class SqlTgUser(SqlRepo):
+    """
+    Repository for TgUsers table
+    """
     async def add(self,
                   user: agtypes.User,
                   user_msg: agtypes.Message,
@@ -150,13 +156,10 @@ class SqlTgUser:
             return result.fetchall()
 
 
-class SqlAction:
+class SqlAction(SqlRepo):
     """
     Repository for ActionStats table
     """
-    def __init__(self, url: str):
-        self.url = url
-
     async def add(self, name: str) -> None:
         """
         Sum it with the existing action count for today
@@ -196,3 +199,39 @@ class SqlAction:
             )
             result = await conn.execute(query)
             return result.fetchall()
+
+
+class SqlMessageToDelete(SqlRepo):
+    """
+    Repository for MessagesToDelete table
+    """
+    async def add(self, msg: agtypes.Message) -> None:
+        """
+        Remember new message
+        """
+        async with create_async_engine(self.url).begin() as conn:
+            vals = {
+                'chat_id': msg.chat.id,
+                'msg_id': msg.message_id,
+                'sent_at': msg.date,
+                'by_bot': msg.from_user.is_bot,
+            }
+            await conn.execute(sa.insert(MessagesToDelete).values(vals))
+
+    async def get_many(self, before: datetime.datetime, by_bot: bool) -> list[SaRow]:
+        """
+        Statistics over entire bot existence time
+        """
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.select(MessagesToDelete).where(
+                (MessagesToDelete.sent_at <= before) & (MessagesToDelete.by_bot == by_bot))
+            result = await conn.execute(query)
+            return result.fetchall()
+
+    async def remove(self, ids: list[int]):
+        """
+        Remove rows with these ids
+        """
+        async with create_async_engine(self.url).begin() as conn:
+            query = sa.delete(MessagesToDelete).filter(MessagesToDelete.id.in_(ids))
+            await conn.execute(query)

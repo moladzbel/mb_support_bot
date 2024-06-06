@@ -6,7 +6,6 @@ import datetime
 
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .enums import ActionName
 from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
@@ -123,9 +122,3 @@ async def stats_to_admin_chat(bots: list) -> None:
 
         msg += '\n#stats'
         await bot.send_message(bot.cfg['admin_group_id'], msg)
-
-
-async def start_jobs(bots: list) -> None:
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(stats_to_admin_chat, 'cron', day_of_week=0, args=(bots,))  # weekly
-    scheduler.start()

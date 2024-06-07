@@ -205,18 +205,22 @@ class SqlMessageToDelete(SqlRepo):
     """
     Repository for MessagesToDelete table
     """
-    async def add(self, msg: agtypes.Message) -> None:
+    async def add(self, msg: agtypes.Message, chat_id: int | None = None) -> None:
         """
         Remember new message
         """
+        if chat_id:  # special case when the message was copied
+            vals = {'chat_id': chat_id, 'sent_at': datetime.datetime.utcnow(), 'by_bot': True}
+        else:  # the usual full message object
+            vals = {'chat_id': msg.chat.id, 'sent_at': msg.date, 'by_bot': msg.from_user.is_bot}
+
+        vals['msg_id'] = msg.message_id
+
         async with create_async_engine(self.url).begin() as conn:
-            vals = {
-                'chat_id': msg.chat.id,
-                'msg_id': msg.message_id,
-                'sent_at': msg.date,
-                'by_bot': msg.from_user.is_bot,
-            }
-            await conn.execute(sa.insert(MessagesToDelete).values(vals))
+            try:
+                await conn.execute(sa.insert(MessagesToDelete).values(vals))
+            except IntegrityError:
+                pass  # such message already in the db
 
     async def get_many(self, before: datetime.datetime, by_bot: bool) -> list[SaRow]:
         """
@@ -228,10 +232,11 @@ class SqlMessageToDelete(SqlRepo):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def remove(self, ids: list[int]):
+    async def remove(self, msgs: list[SaRow]) -> None:
         """
         Remove rows with these ids
         """
-        async with create_async_engine(self.url).begin() as conn:
-            query = sa.delete(MessagesToDelete).filter(MessagesToDelete.id.in_(ids))
-            await conn.execute(query)
+        if ids := [msg.id for msg in msgs]:
+            async with create_async_engine(self.url).begin() as conn:
+                query = sa.delete(MessagesToDelete).filter(MessagesToDelete.id.in_(ids))
+                await conn.execute(query)

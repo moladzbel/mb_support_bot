@@ -50,6 +50,8 @@ The following variables are available in `.env` file:
 - `{BOT_NAME}_DB_ENGINE` - Optional. Database library to use. Only `aiosqlite` is currently supported.
 - `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_CRED_FILE` - Optional. Google Service Account credentials file. If set, all the income and outcome bot messages are being saved to Google Sheets. See the setup steps in "How To" below.
 - `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
+- `{BOT_NAME}_DESTRUCT_USER_MESSAGES_FOR_USER` - Optional. If the bot should delete user messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
+- `{BOT_NAME}_DESTRUCT_BOT_MESSAGES_FOR_USER` - Optional. If the bot should delete its own messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
 
 ## Setting up bot menu
 

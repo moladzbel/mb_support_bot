@@ -1,4 +1,4 @@
-aiogram==3.4.1
+aiogram==3.7.0
 aiosqlite==0.20.0
 alembic==1.13.1
 apscheduler==3.10.4

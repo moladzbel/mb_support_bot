@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
@@ -34,7 +35,7 @@ class SupportBot(Bot):
         self._configure_db()
         self._load_menu()
 
-        super().__init__(token, parse_mode=ParseMode.HTML)
+        super().__init__(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     @property
     def botdir(self) -> Path:

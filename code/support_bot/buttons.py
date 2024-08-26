@@ -14,6 +14,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from .admin_actions import admin_broadcast_start, del_old_topics
 from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
+from .utils import save_for_destruction
 
 
 def load_toml(path: Path) -> dict | None:
@@ -139,19 +140,22 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     bot, chat = msg.bot, msg.chat
     cbd = CBD.unpack(call.data)
     menuitem, path = _find_menu_item(bot.menu, cbd)
+    sentmsg = None
 
     if not cbd.path and not cbd.code:  # main menu
-        await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
+        sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
 
     elif btn := _create_button(menuitem):
         if btn.mode == ButtonMode.menu:
-            await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
+            sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
         elif btn.mode == ButtonMode.file:
-            await send_file(bot, chat.id, menuitem)
+            sentmsg = await send_file(bot, chat.id, menuitem)
         elif btn.mode == ButtonMode.answer:
-            await msg.answer(btn.answer)
+            sentmsg = await msg.answer(btn.answer)
         elif btn.mode == ButtonMode.subject:
-            await set_subject(bot, chat.id, menuitem)
+            sentmsg = await set_subject(bot, chat.id, menuitem)
+
+    await save_for_destruction(sentmsg, bot)
 
     return await call.answer()
 
@@ -193,7 +197,7 @@ async def set_subject(bot, chat_id: int, menuitem: dict) -> None:
     answer = answer or f'Please write your question about "{menuitem["label"]}"'
 
     await bot.db.tguser.update(chat_id, subject=menuitem['subject'])
-    await bot.send_message(chat_id, text=answer)
+    return await bot.send_message(chat_id, text=answer)
 
 
 async def edit_or_send_new_msg_with_keyboard(

@@ -11,7 +11,7 @@ from .filters import (
     GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
     ReplyToBotInGroupForwardedFilter,
 )
-from .utils import make_user_info
+from .utils import make_user_info, save_for_destruction
 
 
 @log
@@ -21,13 +21,15 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     Reply to /start
     """
     bot, user, db = msg.bot, msg.chat, msg.bot.db
+    sentmsg = await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
 
-    await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
-
+    # save user if it's new
     if not await db.tguser.get(user=user):
         await db.tguser.add(user, msg)
 
     await save_user_message(msg)
+    await save_for_destruction(msg, bot)
+    await save_for_destruction(sentmsg, bot)
 
 
 async def _group_hello(msg: agtypes.Message):
@@ -87,7 +89,7 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     Forward user message to internal admin group
     """
     group_id = msg.bot.cfg['admin_group_id']
-    user, db = msg.chat, msg.bot.db
+    bot, user, db = msg.bot, msg.chat, msg.bot.db
 
     if tguser := await db.tguser.get(user=user):
         if thread_id := tguser.thread_id:
@@ -110,6 +112,8 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
         tguser = await db.tguser.add(user, msg, thread_id)
         await save_user_message(msg, new_user=True)
 
+    await save_for_destruction(msg, bot)
+
 
 @log
 @handle_error
@@ -117,12 +121,13 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Copy admin reply to a user
     """
-    db = msg.bot.db
+    bot, db = msg.bot, msg.bot.db
 
     tguser = await db.tguser.get(thread_id=msg.message_thread_id)
-    await msg.copy_to(tguser.user_id)
+    copied = await msg.copy_to(tguser.user_id)
 
     await save_admin_message(msg, tguser)
+    await save_for_destruction(copied, bot, chat_id=tguser.user_id)
 
 
 @log

@@ -1,3 +1,4 @@
+import datetime
 import html
 
 import aiogram.types as agtypes
@@ -49,8 +50,7 @@ def make_short_user_info(user: agtypes.User | None=None, tguser=None) -> str:
 
 def determine_msg_type(msg: agtypes.Message) -> str:
     """
-    Determine the type of message
-    by inspecting the content of the message object
+    Determine a type of the message by inspecting its content
     """
     if msg.photo:
         return MsgType.photo
@@ -80,3 +80,49 @@ def determine_msg_type(msg: agtypes.Message) -> str:
         return MsgType.dice
     else:
         return MsgType.regular_or_other
+
+
+async def destruct_messages(bots: list) -> None:
+    """
+    Delete messages for users, if a bot set up to do so
+    """
+    for bot in bots:
+        destructed = 0
+
+        for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
+            if val := bot.cfg.get(var):
+                by_bot = var == 'destruct_bot_messages_for_user'
+                before = datetime.datetime.utcnow() - datetime.timedelta(hours=val)
+                msgs = await bot.db.msgtodel.get_many(before, by_bot)
+
+                for msg in msgs:
+                    try:
+                        await bot.delete_message(msg.chat_id, msg.msg_id)
+                        destructed += 1
+                    except Exception as exc:
+                        await bot.log_error(exc)
+
+                await bot.db.msgtodel.remove(msgs)
+
+        if destructed:
+            await bot.log(f'Messages destructed: {destructed}')
+
+
+async def save_for_destruction(msg, bot, chat_id=None):
+    """
+    Save msg id to destruct the msg later, if required
+    """
+    if not msg:
+        return
+
+    if chat_id:  # special case when there is no full msg object
+        if bot.cfg.get('destruct_bot_messages_for_user'):
+            await bot.db.msgtodel.add(msg, chat_id=chat_id)
+        return
+
+    var = 'destruct_user_messages_for_user'
+    if msg.from_user.is_bot:
+        var = 'destruct_bot_messages_for_user'
+
+    if bot.cfg.get(var):
+        await bot.db.msgtodel.add(msg)

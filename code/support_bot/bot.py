@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
@@ -20,7 +21,8 @@ class SupportBot(Bot):
     """
     cfg_vars = (
         'admin_group_id', 'hello_msg', 'db_url', 'db_engine', 'save_messages_gsheets_cred_file',
-        'save_messages_gsheets_filename', 'hello_ps',
+        'save_messages_gsheets_filename', 'hello_ps', 'destruct_user_messages_for_user',
+        'destruct_bot_messages_for_user'
     )
     botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
@@ -33,7 +35,7 @@ class SupportBot(Bot):
         self._configure_db()
         self._load_menu()
 
-        super().__init__(token, parse_mode=ParseMode.HTML)
+        super().__init__(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
     @property
     def botdir(self) -> Path:
@@ -59,6 +61,13 @@ class SupportBot(Bot):
         for var in self.botdir_file_cfg_vars:
             if var in cfg:
                 cfg[var] = self.botdir / cfg[var]
+
+        # validate and convert destruction vars
+        for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
+            if var in cfg:
+                cfg[var] = int(cfg[var])
+                if not 1 <= cfg[var] <= 47:
+                    raise ValueError(f'{var} must be between 1 and 47 (hours)')
 
         cfg['hello_msg'] += cfg['hello_ps']
         return os.getenv(f'{self.name}_TOKEN'), cfg

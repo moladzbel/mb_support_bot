@@ -6,7 +6,6 @@ import datetime
 
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .enums import ActionName
 from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
@@ -107,15 +106,15 @@ async def stats_to_admin_chat(bots: list) -> None:
     Report bot stats in admin group
     """
     from_date = datetime.date.today() - datetime.timedelta(days=7)
-    for bot in bots:
 
-        msg = '<b>In the past week, there have been:</b>\n'
+    for bot in bots:
+        msg = '<b>In the past week</b>\n'
         if results := await bot.db.action.get_grouped(from_date):
             msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
         else:
             msg += 'Nothing ¯\_(ツ)_/¯\n'
 
-        msg += '\n<b>From the beginning, there have been:</b>\n'
+        msg += '\n<b>From the beginning</b>\n'
         if results := await bot.db.action.get_total():
             msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
         else:
@@ -123,9 +122,3 @@ async def stats_to_admin_chat(bots: list) -> None:
 
         msg += '\n#stats'
         await bot.send_message(bot.cfg['admin_group_id'], msg)
-
-
-async def start_jobs(bots: list) -> None:
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(stats_to_admin_chat, 'cron', day_of_week=0, args=(bots,))  # weekly
-    scheduler.start()

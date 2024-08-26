@@ -68,8 +68,8 @@ class DbTgUser:
     username: str
     thread_id: int
     last_user_msg_at: datetime.datetime
-    subject: str
 
+    subject: str = None
     banned: bool = False
     shadow_banned: bool = False
 

@@ -1,15 +1,17 @@
 # mb_support_bot
 
-Support (feedback) bot for Telegram. Features:
-- Ability to run any number of support bots in one process, each with its own configuration and a database
-- New topic in admin group for each user
+Support (feedback) bot for Telegram based on aiogram, SQLAlchemy, and Alembic.
+
+Features:
+- Ability to run any number of bots in one process, each with its own configuration and a database
+- A seeparate topic in admin group for each user
 - Easy bot menu builder using `toml` file
-- Optional messages destruction on user side
+- Optional messages self-destruction on user side
 - Broadcasting a message to all the users just from the admin group
 - Optional archiving all the messages in Google Sheet
 - Reporting bot statistics once a week
 
-Based on aiogram, SQLAlchemy, and Alembic.
+![Alt text](media/menu_screenshot.png?raw=true "Menu screenshot")
 
 ## Run in production
 

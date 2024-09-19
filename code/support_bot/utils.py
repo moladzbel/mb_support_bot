@@ -91,6 +91,7 @@ async def destruct_messages(bots: list) -> None:
 
         for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
             if val := bot.cfg.get(var):
+                error_reported = False
                 by_bot = var == 'destruct_bot_messages_for_user'
                 before = datetime.datetime.utcnow() - datetime.timedelta(hours=val)
                 msgs = await bot.db.msgtodel.get_many(before, by_bot)
@@ -100,7 +101,9 @@ async def destruct_messages(bots: list) -> None:
                         await bot.delete_message(msg.chat_id, msg.msg_id)
                         destructed += 1
                     except Exception as exc:
-                        await bot.log_error(exc)
+                        if not error_reported:
+                            await bot.log_error(exc)
+                        error_reported = True
 
                 await bot.db.msgtodel.remove(msgs)
 

@@ -1,39 +1,34 @@
-
 # mb_support_bot
 
-Support bot for Telegram based on aiogram, SQLAlchemy, and Alembic. Allows to run any number of support bots in one process, each with its own configuration and database.
+Support (feedback) bot for Telegram. Features:
+- Ability to run any number of support bots in one process, each with its own configuration and a database
+- New topic in admin group for each user
+- Easy bot menu builder using `toml` file
+- Optional messages destruction on user side
+- Broadcasting a message to all the users just from the admin group
+- Optional archiving all the messages in Google Sheet
+- Reporting bot statistics once a week
+
+Based on aiogram, SQLAlchemy, and Alembic.
 
 ## Run in production
 
-### First time
-
 - Install latest Docker and Docker Compose
 - `cd mb_support_bot`
-- `cp .env.example .env`, fill the variables in the `.env` file (see available options [here](#available-env-options)).
-
-### Then only
-
+- `cp .env.example .env`
+- Fill the variables in the `.env` file (see available options [here](#available-env-options)).
 - Run the bots: `docker compose up -d`
 
-### If `.env` has been modified
-
-- Restart the container: `docker compose down; docker compose up -d`
-
-SQLite databases and logs are in `shared/` dir.
-
-## System commands
-
-- Statically check the code: `ruff check .` (`pip install ruff` for the first time)
-- Create migration scripts after changing DB schema: `python run.py makemigrations`
-- Apply migration scripts to all the bot databases: `python run.py migrate`
+Databases and logs are in `shared/` dir.
+If `.env` has been modified, restart the container: `docker compose down; docker compose up -d`
 
 ## Available .env options
 
 The following variables are available in `.env` file:
 - `BOTS_ENABLED` - names of all the bots you want to run, separated by comma. Example: `YOUTH_BLOC,LEGALIZE`. A name from this list used in below vars in place of `{BOT_NAME}`. Do not change the name after the first start of the bot.
 - `{BOT_NAME}_TOKEN` - Bot's secret token.
-- `{BOT_NAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be admin with 'Manage topics' permission.
-- `{BOT_NAME}_HELLO_MSG` - Optional. Your first message to a new user.
+- `{BOT_NAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' permission.
+- `{BOT_NAME}_HELLO_MSG` - Optional. Your welcome message to a new user.
 - `{BOT_NAME}_HELLO_PS` - Optional. Your P.S. in hello message. Default is "The bot is created by @moladzbel".
 - `{BOT_NAME}_DB_URL` - Optional. Database URL if you want to use something other than SQLite in `shared/`.
 - `{BOT_NAME}_DB_ENGINE` - Optional. Database library to use. Only `aiosqlite` is currently supported.
@@ -87,3 +82,9 @@ To setup a user menu for your bot, create a file `shared/{BOT_DIR}/menu.toml`. S
 1. Specify the name of the JSON file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_CRED_FILE` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEETS_CRED_FILE=mybot-ga-api-ce213a7201e5.json`
 1. Specify the name of your shared spreadsheet file in `.env` file in `{BOT_NAME}_SAVE_MESSAGES_GSHEETS_FILENAME` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEETS_FILENAME=Mybot archive`.
 1. Restart the bot to re-read `.env`
+
+## Development
+
+- Statically check the code: `ruff check .` (`pip install ruff` first)
+- Create migration scripts after changing DB schema: `python run.py makemigrations`
+- Apply migration scripts to all the bot databases: `python run.py migrate`

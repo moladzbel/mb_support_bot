@@ -25,7 +25,7 @@ class TgUsers(Base):
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
     last_user_msg_at = sa.Column(sa.DateTime)
-    subject = sa.Column(sa.String(32))
+    subject = sa.Column(sa.String(63))
 
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
     shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)

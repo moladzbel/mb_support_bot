@@ -4,12 +4,12 @@ Support (feedback) bot for Telegram based on aiogram, SQLAlchemy, and Alembic.
 
 Features:
 - Ability to run any number of bots in one process, each with its own configuration and a database
-- A seeparate topic in admin group for each user
+- A separate topic in admin group for each user
 - Easy bot menu builder using `toml` file
 - Optional messages self-destruction on user side
-- Broadcasting a message to all the users just from the admin group
-- Optional archiving all the messages in Google Sheet
-- Reporting bot statistics once a week
+- Broadcasting a message to all the users right from the admin group
+- Optional archiving all the messages to your Google Sheet
+- Reporting bot statistics once a week in your admin group
 
 ![Alt text](media/menu_screenshot.png?raw=true "Menu screenshot")
 
@@ -41,7 +41,7 @@ The following variables are available in `.env` file:
 
 ## Setting up bot menu
 
-To setup a user menu for your bot, create a file `shared/{BOT_DIR}/menu.toml`. See example of it's content in `menu.example.toml` file. There are 5 button modes currently supported:
+To setup a user menu for your bot, create a file `shared/{BOT_NAME}/menu.toml`. See example of it's content in `menu.example.toml` file. There are 5 button modes currently supported:
 - answer: just a text answer
 - file: send a file to the user
 - link: open an external link

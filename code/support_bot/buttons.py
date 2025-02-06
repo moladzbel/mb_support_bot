@@ -201,7 +201,7 @@ async def set_subject(bot, user: agtypes.User, menuitem: dict) -> agtypes.Messag
     usrmsg = await bot.send_message(user.id, text=answer)
 
     if tguser := await bot.db.tguser.get(user=user):
-        if tguser.subject != newsubj:
+        if tguser.thread_id and tguser.subject != newsubj:
             await bot.db.tguser.update(user.id, subject=newsubj)
             answer = 'The user changed subject to <b>' + newsubj + '</b>'
             await bot.send_message(group_id, answer, message_thread_id=tguser.thread_id)

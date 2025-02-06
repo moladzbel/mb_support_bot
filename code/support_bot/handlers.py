@@ -23,11 +23,12 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     bot, user, db = msg.bot, msg.chat, msg.bot.db
     sentmsg = await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
 
-    # save user if it's new
-    if not await db.tguser.get(user=user):
+    new_user = False
+    if not await db.tguser.get(user=user):  # save user if it's new
         await db.tguser.add(user, msg)
+        new_user = True
 
-    await save_user_message(msg)
+    await save_user_message(msg, new_user=new_user)
     await save_for_destruction(msg, bot)
     await save_for_destruction(sentmsg, bot)
 

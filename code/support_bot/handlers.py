@@ -105,14 +105,13 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
             await msg.forward(group_id, message_thread_id=thread_id)
 
         await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
-        await save_user_message(msg)
 
     else:
         thread_id = await _new_topic(msg)
         await msg.forward(group_id, message_thread_id=thread_id)
         tguser = await db.tguser.add(user, msg, thread_id)
-        await save_user_message(msg, new_user=True)
 
+    await save_user_message(msg)
     await save_for_destruction(msg, bot)
 
 

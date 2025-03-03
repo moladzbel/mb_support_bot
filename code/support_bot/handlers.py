@@ -25,10 +25,11 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
 
     new_user = False
     if not await db.tguser.get(user=user):  # save user if it's new
-        await db.tguser.add(user, msg)
+        thread_id = await _new_topic(msg)
+        await db.tguser.add(user, msg, thread_id)
         new_user = True
 
-    await save_user_message(msg, new_user=new_user)
+    await save_user_message(msg, new_user=new_user, stat=False)
     await save_for_destruction(msg, bot)
     await save_for_destruction(sentmsg, bot)
 

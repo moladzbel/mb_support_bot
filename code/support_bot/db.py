@@ -70,7 +70,7 @@ class DbTgUser:
     last_user_msg_at: datetime.datetime
     subject: str = None
     banned: bool = False
-    first_replied: bool = False
+    first_replied: bool = False  # whether first_reply has been sent or not
 
 
 class SqlDb:
@@ -99,10 +99,11 @@ class SqlTgUser(SqlRepo):
     async def add(self,
                   user: agtypes.User,
                   user_msg: agtypes.Message,
-                  thread_id: int | None = None) -> DbTgUser:
+                  thread_id: int | None = None,
+                  first_replied: bool = False) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
-            last_user_msg_at=user_msg.date.replace(tzinfo=None),
+            last_user_msg_at=user_msg.date.replace(tzinfo=None), first_replied=first_replied,
         )
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))

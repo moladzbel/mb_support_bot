@@ -40,9 +40,9 @@ async def _group_hello(msg: agtypes.Message):
     """
     group = msg.chat
 
-    text = f'Hello!\nID of this chat: <code>{group.id}</code>'
+    text = f'Hello!\nID of this group: <code>{group.id}</code>'
     if not group.is_forum:
-        text += '\n\n❗ Please enable topics in the group settings'
+        text += '\n\n❗ Please enable topics in the group settings. This will also change its ID.'
     await msg.bot.send_message(group.id, text)
 
 
@@ -88,7 +88,8 @@ async def group_chat_created(msg: agtypes.Message, *args, **kwargs):
 @handle_error
 async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
-    Forward user message to internal admin group
+    Create topic and a user row in db if needed,
+    then forward user message to internal admin group
     """
     group_id = msg.bot.cfg['admin_group_id']
     bot, user, db = msg.bot, msg.chat, msg.bot.db
@@ -105,12 +106,21 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
             thread_id = await _new_topic(msg, tguser=tguser)
             await msg.forward(group_id, message_thread_id=thread_id)
 
-        await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
+        if tguser.first_replied:
+            await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
+        else:
+            if bot.cfg['first_reply']:
+                sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
+                await save_for_destruction(sentmsg, bot)
+            await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id, first_replied=True)
 
     else:
         thread_id = await _new_topic(msg)
+        if bot.cfg['first_reply']:
+            sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
+            await save_for_destruction(sentmsg, bot)
+        tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
         await msg.forward(group_id, message_thread_id=thread_id)
-        tguser = await db.tguser.add(user, msg, thread_id)
 
     await save_user_message(msg)
     await save_for_destruction(msg, bot)

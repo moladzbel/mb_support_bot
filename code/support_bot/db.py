@@ -8,6 +8,7 @@ from sqlalchemy.engine.row import Row as SaRow
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.sql import false
 
 from .enums import ActionName
 
@@ -25,10 +26,9 @@ class TgUsers(Base):
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
     last_user_msg_at = sa.Column(sa.DateTime)
-    subject = sa.Column(sa.String(63))
-
+    subject = sa.Column(sa.String(32))
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
-    shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
+    first_replied = sa.Column(sa.Boolean, server_default=false(), nullable=False)
 
 
 class ActionStats(Base):
@@ -68,10 +68,9 @@ class DbTgUser:
     username: str
     thread_id: int
     last_user_msg_at: datetime.datetime
-
     subject: str = None
     banned: bool = False
-    shadow_banned: bool = False
+    first_replied: bool = False
 
 
 class SqlDb:

@@ -6,6 +6,7 @@ The following variables are available in `.env` file:
 - `{BOTNAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' permission.
 - `{BOTNAME}_HELLO_MSG` - Optional. Your welcome message to a new user.
 - `{BOTNAME}_HELLO_PS` - Optional. Your P.S. in hello message. Default is "The bot is created by @moladzbel".
+- `{BOTNAME}_FIRST_REPLY` - Optional. Text of an automatic reply to the first meaningful user mesasge (not the /start) sent to the bot.
 - `{BOTNAME}_DB_URL` - Optional. Database URL if you want to use something other than SQLite in `shared/`.
 - `{BOTNAME}_DB_ENGINE` - Optional. Database library to use. Only `aiosqlite` is currently supported.
 - `{BOTNAME}_SAVE_MESSAGES_GSHEETS_CRED_FILE` - Optional. Google Service Account credentials file. If set, all the income and outcome bot messages are being saved to Google Sheets. See the setup steps in "How To" below.
@@ -58,7 +59,7 @@ To setup a user menu for your bot, create a file `shared/{BOTNAME}/menu.toml`. S
 1. Specify the name of your shared spreadsheet file in `.env` file in `{BOTNAME}_SAVE_MESSAGES_GSHEETS_FILENAME` variable. Example: `MYBOT_SAVE_MESSAGES_GSHEETS_FILENAME=Mybot archive`.
 1. Restart the bot to re-read `.env`
 
-## Development
+## Hacking
 
 - Statically check the code: `ruff check .` (`pip install ruff` first)
 - Create migration scripts after changing DB schema: `cd code; python run.py makemigrations`

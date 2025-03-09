@@ -84,7 +84,11 @@ async def save_admin_message(msg: agtypes.Message, tguser) -> None:
         await gsheets_save_admin_message(msg, tguser)
 
 
-async def save_user_message(msg: agtypes.Message, new_user: bool=False) -> None:
+async def save_user_message(
+        msg: agtypes.Message,
+        new_user: bool = False,
+        stat: bool = True,
+    ) -> None:
     """
     Entrypoint for all the mechanisms of saving messages sent by user.
     There is only one currently: Google Sheets.
@@ -96,7 +100,8 @@ async def save_user_message(msg: agtypes.Message, new_user: bool=False) -> None:
     if gsheets_cred_file and gsheets_filename:
         await gsheets_save_user_message(msg, highlight=new_user)
 
-    await bot.db.action.add(ActionName.user_message)
+    if stat:
+        await bot.db.action.add(ActionName.user_message)
     if new_user:
         await bot.db.action.add(ActionName.new_user)
 
@@ -112,13 +117,13 @@ async def stats_to_admin_chat(bots: list) -> None:
         if results := await bot.db.action.get_grouped(from_date):
             msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
         else:
-            msg += 'Nothing ¯\_(ツ)_/¯\n'
+            msg += '- Nothing\n'
 
         msg += '\n<b>From the beginning</b>\n'
         if results := await bot.db.action.get_total():
             msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
         else:
-            msg += 'Nothing yet ¯\_(ツ)_/¯\n'
+            msg += '- Nothing yet\n'
 
         msg += '\n#stats'
         await bot.send_message(bot.cfg['admin_group_id'], msg)

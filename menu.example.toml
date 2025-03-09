@@ -12,7 +12,7 @@ file = "document.txt"  # Comment: the file must reside in shared/{BOT_DIR}/files
 answer = "Reply caption for the document"
 
 [choose_subject]
-label = "Choose subject"
+label = "Choose subject in submenu"
 answer = "Sets a subject user wants to talk about"
 
 [some_link]

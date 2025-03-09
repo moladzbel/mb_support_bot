@@ -153,7 +153,7 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
         elif btn.mode == ButtonMode.answer:
             sentmsg = await msg.answer(btn.answer)
         elif btn.mode == ButtonMode.subject:
-            sentmsg = await set_subject(bot, chat.id, menuitem)
+            sentmsg = await set_subject(bot, chat, menuitem)
 
     await save_for_destruction(sentmsg, bot)
 
@@ -189,15 +189,24 @@ async def send_file(bot, chat_id: int, menuitem: dict) -> agtypes.Message:
     raise FileNotFoundError(fpath.resolve())
 
 
-async def set_subject(bot, chat_id: int, menuitem: dict) -> None:
+async def set_subject(bot, user: agtypes.User, menuitem: dict) -> agtypes.Message:
     """
     Set the chosen subject to the user and report that.
     """
+    newsubj = menuitem['subject']
+    group_id = bot.cfg['admin_group_id']
+
     answer = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
     answer = answer or f'Please write your question about "{menuitem["label"]}"'
+    usrmsg = await bot.send_message(user.id, text=answer)
 
-    await bot.db.tguser.update(chat_id, subject=menuitem['subject'])
-    return await bot.send_message(chat_id, text=answer)
+    if tguser := await bot.db.tguser.get(user=user):
+        if tguser.thread_id and tguser.subject != newsubj:
+            await bot.db.tguser.update(user.id, subject=newsubj)
+            answer = 'The user changed subject to <b>' + newsubj + '</b>'
+            await bot.send_message(group_id, answer, message_thread_id=tguser.thread_id)
+
+    return usrmsg
 
 
 async def edit_or_send_new_msg_with_keyboard(

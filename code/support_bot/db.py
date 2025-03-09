@@ -8,6 +8,7 @@ from sqlalchemy.engine.row import Row as SaRow
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.sql import false
 
 from .enums import ActionName
 
@@ -26,9 +27,8 @@ class TgUsers(Base):
     thread_id = sa.Column(sa.Integer, index=True)
     last_user_msg_at = sa.Column(sa.DateTime)
     subject = sa.Column(sa.String(32))
-
     banned = sa.Column(sa.Boolean, default=False, nullable=False)
-    shadow_banned = sa.Column(sa.Boolean, default=False, nullable=False)
+    first_replied = sa.Column(sa.Boolean, server_default=false(), nullable=False)
 
 
 class ActionStats(Base):
@@ -68,10 +68,9 @@ class DbTgUser:
     username: str
     thread_id: int
     last_user_msg_at: datetime.datetime
-
     subject: str = None
     banned: bool = False
-    shadow_banned: bool = False
+    first_replied: bool = False  # whether first_reply has been sent or not
 
 
 class SqlDb:
@@ -100,10 +99,11 @@ class SqlTgUser(SqlRepo):
     async def add(self,
                   user: agtypes.User,
                   user_msg: agtypes.Message,
-                  thread_id: int | None = None) -> DbTgUser:
+                  thread_id: int | None = None,
+                  first_replied: bool = False) -> DbTgUser:
         tguser = DbTgUser(
             user_id=user.id, full_name=user.full_name, username=user.username, thread_id=thread_id,
-            last_user_msg_at=user_msg.date.replace(tzinfo=None),
+            last_user_msg_at=user_msg.date.replace(tzinfo=None), first_replied=first_replied,
         )
         async with create_async_engine(self.url).begin() as conn:
             await conn.execute(sa.delete(TgUsers).filter_by(user_id=user.id))

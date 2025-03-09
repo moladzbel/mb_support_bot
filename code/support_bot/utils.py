@@ -84,7 +84,7 @@ def determine_msg_type(msg: agtypes.Message) -> str:
 
 async def destruct_messages(bots: list) -> None:
     """
-    Delete messages for users, if a bot set up to do so
+    Delete messages for users, if a bot is set up to do so
     """
     for bot in bots:
         destructed = 0

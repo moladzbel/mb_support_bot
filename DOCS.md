@@ -4,8 +4,8 @@ The following variables are available in `.env` file:
 - `BOTS_ENABLED` - names of all the bots you want to run, separated by comma. Example: `YOUTH_BLOC,LEGALIZE`. A name from this list used in below vars in place of `{BOTNAME}`. Do not change the name after the first start of the bot.
 - `{BOTNAME}_TOKEN` - Bot's secret token.
 - `{BOTNAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' permission.
-- `{BOTNAME}_HELLO_MSG` - Optional. Your welcome message to a new user.
-- `{BOTNAME}_HELLO_PS` - Optional. Your P.S. in hello message. Default is "The bot is created by @moladzbel".
+- `{BOTNAME}_HELLO_MSG` - Optional. A welcome message to a new user. This and other messages (`{BOTNAME}_HELLO_PS`, `{BOTNAME}_FIRST_REPLY`) can use all the HTML tags supported by Telegram for styling: see *Styling messages* section below.
+- `{BOTNAME}_HELLO_PS` - Optional. A P.S. in hello message. Default is "The bot is created by @moladzbel".
 - `{BOTNAME}_FIRST_REPLY` - Optional. Text of an automatic reply to the first meaningful user mesasge (not the /start) sent to the bot.
 - `{BOTNAME}_DB_URL` - Optional. Database URL if you want to use something other than SQLite in `shared/`.
 - `{BOTNAME}_DB_ENGINE` - Optional. Database library to use. Only `aiosqlite` is currently supported.
@@ -13,6 +13,14 @@ The following variables are available in `.env` file:
 - `{BOTNAME}_SAVE_MESSAGES_GSHEETS_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
 - `{BOTNAME}_DESTRUCT_USER_MESSAGES_FOR_USER` - Optional. If the bot should delete user messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
 - `{BOTNAME}_DESTRUCT_BOT_MESSAGES_FOR_USER` - Optional. If the bot should delete its own messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
+
+## Styling messages
+
+Messages set as .env variables can be formatted with Telegram HTML tags, such as `<b>`, `<i>`, `<s>` and so on, see the full list [here](https://publer.com/help/en/article/how-to-style-telegram-text-using-html-tags-xdepnw/). One can also use `\n` for a new line.
+
+Example (a line in `.env` file):
+
+`MYBOT_HELLO_MSG=Hi!\nThis is a support bot of <b>Title</b> channel.`
 
 ## Setting up bot menu
 
@@ -62,6 +70,6 @@ To setup a user menu for your bot, create a file `shared/{BOTNAME}/menu.toml`. S
 ## Hacking
 
 - Statically check the code: `ruff check .` (`pip install ruff` first)
+- Run without docker: create venv, install requirements.txt, and run the bot as `python code/run.py`
 - Create migration scripts after changing DB schema: `cd code; python run.py makemigrations`
 - Apply migration scripts to all the enabled bot databases: `cd code; python run.py migrate`
-- Run without docker: create venv, install requirements.txt, and run the bot as `python code/run.py`

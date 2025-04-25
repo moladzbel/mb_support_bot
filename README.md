@@ -3,7 +3,7 @@
 Support (feedback) bot for Telegram. Based on aiogram and SQLAlchemy.
 
 Features:
-- Run as many bots as you want in one process. Each bot have its own settings and database
+- Run as many bots as you want in one process. Each bot has its own settings and database
 - Separate topic in the admin group for each user who writes to the bot
 - Simple bot menu builder using `toml` file
 - Optional message self-destruction on the user's side, triggered by a timer
@@ -20,7 +20,7 @@ Features:
 1. Clone the repo
 1. `cd mb_support_bot`
 1. `cp .env.example .env`
-1. Add some name unique for your first bot to `BOTS_ENABLED` list in `.env`, for example `BOTS_ENABLED=MYBOT`. 
+1. Add some name unique for your first bot to `BOTS_ENABLED` list in `.env`, for example `BOTS_ENABLED=MYBOT`
 1. Place bot token to `{BOTNAME}_TOKEN` var in `.env`, e.g. `MYBOT_TOKEN=1312:qwerty`
 1. Restart the container: `docker compose up -d`
 1. Create a new group, enable Topics in the group settings

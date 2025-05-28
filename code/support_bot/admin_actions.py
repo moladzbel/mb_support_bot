@@ -107,8 +107,8 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
                 await bot.copy_message(user.user_id, from_chat_id=msg.chat.id,
                                        message_id=state_data['message'])
                 i += 1
-            except TelegramBadRequest:
-                pass
+            except TelegramBadRequest as exc:
+                await bot.log_error(exc)
 
         await msg.answer(f'Broadcasting is done 🫡. {i}/{len(users)} users received the message.')
 

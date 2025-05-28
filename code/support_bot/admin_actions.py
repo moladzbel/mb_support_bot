@@ -108,9 +108,9 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
                                        message_id=state_data['message'])
                 success_count += 1
             except TelegramForbiddenError as exc:
-                await bot.log_error(exc, traceback=False)
+                pass
 
-            if len(users) > 10 and i % (len(users) // 10) == 0:
+            if len(users) > 50 and i != 0 and i % (len(users) // 10) == 0:
                 await bot.log(f'{i}/{len(users)} processed for broadcasting')
 
         res_str = f'{success_count}/{len(users)}'

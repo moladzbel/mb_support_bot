@@ -2,7 +2,7 @@ import asyncio
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
@@ -100,17 +100,22 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
         text = 'Broadcasting the message...'
         await bot.edit_message_text(chat_id=msg.chat.id, message_id=cbd.msgid, text=text)
 
-        i = 0
+        success_count = 0
         users = await bot.db.tguser.get_all()
-        for user in users:
+        for i, user in enumerate(users):
             try:
                 await bot.copy_message(user.user_id, from_chat_id=msg.chat.id,
                                        message_id=state_data['message'])
-                i += 1
-            except TelegramBadRequest as exc:
-                await bot.log_error(exc)
+                success_count += 1
+            except TelegramForbiddenError as exc:
+                await bot.log_error(exc, traceback=False)
 
-        await msg.answer(f'Broadcasting is done 🫡. {i}/{len(users)} users received the message.')
+            if len(users) > 10 and i % (len(users) // 10) == 0:
+                await bot.log(f'{i}/{len(users)} processed for broadcasting')
+
+        res_str = f'{success_count}/{len(users)}'
+        await bot.log(f'Broadcasting is done: {res_str}')
+        await msg.answer(f'Broadcasting is done 🫡. {res_str} users received the message.')
 
     elif cbd.code == 'no':
         text = 'Broadcasting canceled'

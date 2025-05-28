@@ -83,8 +83,8 @@ class SupportBot(Bot):
     async def log(self, message: str, level=logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')
 
-    async def log_error(self, exception: Exception) -> None:
-        self._logger.exception(str(exception))
+    async def log_error(self, exception: Exception, traceback: bool = True) -> None:
+        self._logger.error(str(exception), exc_info=traceback)
 
     def get_gsheets_creds(self):
         """

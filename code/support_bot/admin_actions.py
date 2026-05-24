@@ -2,7 +2,7 @@ import asyncio
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
@@ -103,12 +103,22 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
         success_count = 0
         users = await bot.db.tguser.get_all()
         for i, user in enumerate(users):
-            try:
-                await bot.copy_message(user.user_id, from_chat_id=msg.chat.id,
-                                       message_id=state_data['message'])
-                success_count += 1
-            except TelegramForbiddenError as exc:
-                pass
+            while True:
+                try:
+                    await bot.copy_message(user.user_id, from_chat_id=msg.chat.id,
+                                           message_id=state_data['message'])
+                    success_count += 1
+                    break
+                except TelegramRetryAfter as exc:
+                    await bot.log(f'Throttled by Telegram, sleeping {exc.retry_after}s')
+                    await asyncio.sleep(exc.retry_after)
+                except TelegramForbiddenError:
+                    break
+                except Exception as exc:
+                    await bot.log_error(exc, traceback=False)
+                    break
+
+            await asyncio.sleep(0.05)  # ~20 msgs/sec, under Telegram's ~30/sec global cap
 
             if len(users) > 50 and i != 0 and i % (len(users) // 10) == 0:
                 await bot.log(f'{i}/{len(users)} processed for broadcasting')

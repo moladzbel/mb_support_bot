@@ -21,7 +21,7 @@ class TgUsers(Base):
     __tablename__ = 'tgusers'
 
     id = sa.Column(sa.Integer, primary_key=True, index=True)
-    user_id = sa.Column(sa.Integer, index=True, nullable=False)
+    user_id = sa.Column(sa.BigInteger, index=True, nullable=False)
     full_name = sa.Column(sa.String(129))
     username = sa.Column(sa.String(32))
     thread_id = sa.Column(sa.Integer, index=True)
@@ -48,13 +48,27 @@ class MessagesToDelete(Base):
     __tablename__ = 'messages_to_delete'
 
     id = sa.Column(sa.Integer, primary_key=True)
-    chat_id = sa.Column(sa.Integer, nullable=False)
+    chat_id = sa.Column(sa.BigInteger, nullable=False)
     msg_id = sa.Column(sa.Integer, nullable=False)
     sent_at = sa.Column(sa.DateTime, nullable=False)
     by_bot = sa.Column(sa.Boolean, nullable=False)
 
     __table_args__ = (
         sa.UniqueConstraint('chat_id', 'msg_id'),
+    )
+
+
+class MessageMap(Base):
+    __tablename__ = 'message_map'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    admin_msg_id = sa.Column(sa.Integer, nullable=False)
+    user_id = sa.Column(sa.BigInteger, nullable=False)
+    user_msg_id = sa.Column(sa.Integer, nullable=False)
+
+    __table_args__ = (
+        sa.UniqueConstraint('admin_msg_id'),
+        sa.UniqueConstraint('user_id', 'user_msg_id'),
     )
 
 
@@ -83,6 +97,7 @@ class SqlDb:
         self.tguser = SqlTgUser(self.engine)
         self.action = SqlAction(self.engine)
         self.msgtodel = SqlMessageToDelete(self.engine)
+        self.msgmap = SqlMessageMap(self.engine)
 
 
 class SqlRepo:
@@ -242,3 +257,20 @@ class SqlMessageToDelete(SqlRepo):
             async with self.engine.begin() as conn:
                 query = sa.delete(MessagesToDelete).filter(MessagesToDelete.id.in_(ids))
                 await conn.execute(query)
+
+
+class SqlMessageMap(SqlRepo):
+    """
+    Repository for MessageMap table. A row pairs a message in the admin chat
+    with the corresponding message in the user chat (in either direction).
+    """
+    async def add(self, admin_msg_id: int, user_id: int, user_msg_id: int) -> None:
+        vals = {'admin_msg_id': admin_msg_id, 'user_id': user_id, 'user_msg_id': user_msg_id}
+        async with self.engine.begin() as conn:
+            await conn.execute(sa.insert(MessageMap).values(vals))
+
+    async def get(self, admin_msg_id: int) -> SaRow | None:
+        query = sa.select(MessageMap).where(MessageMap.admin_msg_id==admin_msg_id)
+        async with self.engine.begin() as conn:
+            result = await conn.execute(query)
+            return result.fetchone()

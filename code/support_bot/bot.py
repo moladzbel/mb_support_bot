@@ -11,6 +11,7 @@ from google.oauth2.service_account import Credentials
 from .buttons import load_toml
 from .const import AdminBtn, SendMode
 from .db import SqlDb
+from .utils import parse_bool
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +25,7 @@ class SupportBot(Bot):
         'admin_group_id', 'hello_msg', 'first_reply', 'db_url', 'db_engine',
         'save_messages_gsheets_cred_file', 'save_messages_gsheets_filename', 'hello_ps',
         'destruct_user_messages_for_user', 'destruct_bot_messages_for_user',
-        'send_mode',
+        'send_mode', 'reply_as_reply',
     )
     botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
@@ -56,11 +57,8 @@ class SupportBot(Bot):
     def botdir(self) -> Path:
         return BASE_DIR / '..' / 'shared' / self.name
 
-    def _read_config(self) -> tuple[str, dict]:
-        """
-        Read a bot token and a config with other vars
-        """
-        cfg = {
+    def _init_config(self) -> dict:
+        return {
             'name': self.name,
             'hello_msg': 'Hello! Write your message',
             'first_reply': (
@@ -71,6 +69,13 @@ class SupportBot(Bot):
             'db_engine': 'aiosqlite',
             'hello_ps': '\n\n<i>The bot is created by @moladzbel</i>',
         }
+
+    def _read_config(self) -> tuple[str, dict]:
+        """
+        Read a bot token and a config with other vars
+        """
+        cfg = self._init_config()
+
         for var in self.cfg_vars:
             envvar = os.getenv(f'{self.name}_{var.upper()}')
             if envvar is not None:
@@ -91,7 +96,9 @@ class SupportBot(Bot):
         cfg['send_mode'] = cfg.get('send_mode') or SendMode.REPLY
         SendMode.validate(cfg['send_mode'], raise_exc=True)
 
+        cfg['reply_as_reply'] = parse_bool(cfg.get('reply_as_reply'))
         cfg['hello_msg'] += cfg['hello_ps']
+
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self) -> None:
@@ -123,9 +130,12 @@ class SupportBot(Bot):
             self.menu['answer'] = self.cfg['hello_msg']
 
         self.admin_menu = {
-            AdminBtn.BROADCAST: {'label': '📢 Broadcast to all subscribers',
-                                 'answer': ("Send here a message to broadcast, and then I'll ask "
-                                            "for confirmation")},
-            AdminBtn.DEL_OLD_TOPICS: {'label': '🧹 Delete topics older than 2 weeks',
-                                      'answer': ('Deleting topics older than 2 weeks...')},
+            AdminBtn.BROADCAST: {
+                'label': '📢 Broadcast to all subscribers',
+                'answer': "Send here a message to broadcast, and then I'll ask for confirmation",
+            },
+            AdminBtn.DEL_OLD_TOPICS: {
+                'label': '🧹 Delete topics older than 2 weeks',
+                'answer': 'Deleting topics older than 2 weeks...',
+            },
         }

@@ -2,6 +2,7 @@ import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.types import ReplyParameters
 
 from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
@@ -104,18 +105,19 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     group_id = msg.bot.cfg['admin_group_id']
     bot, user, db = msg.bot, msg.chat, msg.bot.db
 
+    forwarded = None
     async with bot.user_lock(user.id):
         if tguser := await db.tguser.get(user=user):
             if thread_id := tguser.thread_id:
                 try:
-                    await msg.forward(group_id, message_thread_id=thread_id)
+                    forwarded = await msg.forward(group_id, message_thread_id=thread_id)
                 except TelegramBadRequest as exc:  # the topic vanished for whatever reason
                     if 'thread not found' in exc.message.lower():
                         thread_id = await _new_topic(msg, tguser=tguser)
-                        await msg.forward(group_id, message_thread_id=thread_id)
+                        forwarded = await msg.forward(group_id, message_thread_id=thread_id)
             else:
                 thread_id = await _new_topic(msg, tguser=tguser)
-                await msg.forward(group_id, message_thread_id=thread_id)
+                forwarded = await msg.forward(group_id, message_thread_id=thread_id)
 
             if tguser.first_replied:
                 await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
@@ -131,7 +133,10 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
                 sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
                 await save_for_destruction(sentmsg, bot)
             tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
-            await msg.forward(group_id, message_thread_id=thread_id)
+            forwarded = await msg.forward(group_id, message_thread_id=thread_id)
+
+        if forwarded:
+            await db.msgmap.add(forwarded.message_id, user.id, msg.message_id)
 
     await save_user_message(msg)
     await save_for_destruction(msg, bot)
@@ -141,14 +146,22 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
 @handle_error
 async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
-    Copy admin reply to a user
+    Copy admin reply to a user. If reply_as_reply is on and the admin replied
+    to a forwarded user message, anchor the copy to that user's original message.
     """
     bot, db = msg.bot, msg.bot.db
 
     tguser = await db.tguser.get(thread_id=msg.message_thread_id)
     if tguser is None:
         return
-    copied = await msg.copy_to(tguser.user_id)
+
+    reply_params = None
+    if bot.cfg['reply_as_reply'] and msg.reply_to_message:
+        if mapping := await db.msgmap.get(msg.reply_to_message.message_id):
+            reply_params = ReplyParameters(message_id=mapping.user_msg_id,
+                                           allow_sending_without_reply=True)
+
+    copied = await msg.copy_to(tguser.user_id, reply_parameters=reply_params)
 
     await save_admin_message(msg, tguser)
     await save_for_destruction(copied, bot, chat_id=tguser.user_id)

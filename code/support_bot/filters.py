@@ -46,6 +46,26 @@ class ReplyToBotInGroupForwardedFilter(Filter):
             return by_bot and not_topic_reply and is_admin_group_1 and is_admin_group_2
 
 
+class MessageInAdminTopic(Filter):
+    """
+    Matches any message posted by an admin in a user topic of the admin group,
+    when forward_all_topic_messages is enabled. Excludes the bot's own messages
+    (topic header, forwarded user messages) and replies to other admins.
+    """
+    async def __call__(self, msg: agtypes.Message) -> bool:
+        if not msg.bot.cfg.get('forward_all_topic_messages'):
+            return False
+        if msg.chat.id != int(msg.bot.cfg['admin_group_id']):
+            return False
+        if not msg.message_thread_id:
+            return False
+        if msg.from_user and msg.from_user.id == msg.bot.id:
+            return False
+        if (to_msg := msg.reply_to_message) and to_msg.from_user.id != msg.bot.id:
+            return False
+        return True
+
+
 class InAdminGroup(Filter):
     """
     Checks that a message posted in the admin group,

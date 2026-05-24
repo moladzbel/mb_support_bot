@@ -8,7 +8,7 @@ from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_han
 from .informing import handle_error, log, save_admin_message, save_user_message
 from .filters import (
     ACommandFilter, BtnInAdminGroup, BtnInPrivateChat, BotMention, InAdminGroup,
-    GroupChatCreatedFilter, NewChatMembersFilter, PrivateChatFilter,
+    GroupChatCreatedFilter, MessageInAdminTopic, NewChatMembersFilter, PrivateChatFilter,
     ReplyToBotInGroupForwardedFilter,
 )
 from .utils import make_user_info, save_for_destruction
@@ -58,7 +58,12 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     thread_id = response.message_thread_id
 
     text = await make_user_info(user, bot=bot, tguser=tguser)
-    text += '\n\n<i>Replies to any bot message in this topic will be sent to the user</i>'
+    if bot.cfg.get('forward_all_topic_messages'):
+        text += ('\n\n<i><b>Any</b> message in this topic will be sent back '
+                 'to the user, except replies to another admin</i>')
+    else:
+        text += ('\n\n<i><b>Replies</b> to any bot message '
+                 'in this topic will be sent to the user</i>')
 
     await bot.send_message(group_id, text, message_thread_id=thread_id)
     return thread_id
@@ -137,6 +142,8 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     bot, db = msg.bot, msg.bot.db
 
     tguser = await db.tguser.get(thread_id=msg.message_thread_id)
+    if tguser is None:
+        return
     copied = await msg.copy_to(tguser.user_id)
 
     await save_admin_message(msg, tguser)
@@ -160,6 +167,7 @@ def register_handlers(dp: Dispatcher) -> None:
     """
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
     dp.message.register(admin_message, ~ACommandFilter(), ReplyToBotInGroupForwardedFilter())
+    dp.message.register(admin_message, ~ACommandFilter(), MessageInAdminTopic())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
 
     dp.message.register(added_to_group, NewChatMembersFilter())

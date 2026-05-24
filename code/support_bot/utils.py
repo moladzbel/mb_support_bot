@@ -6,6 +6,24 @@ import aiogram.types as agtypes
 from .const import MsgType
 
 
+_TRUE_STRINGS = frozenset(('1', 'true', 'yes', 'on', 'y', 't'))
+_FALSE_STRINGS = frozenset(('0', 'false', 'no', 'off', 'n', 'f'))
+
+
+def parse_bool(value) -> bool | None:
+    """
+    Parse a string into a bool. Returns True for 1/true/yes/on/y/t,
+    False for 0/false/no/off/n/f (case-insensitive), and None otherwise.
+    """
+    token = str(value).strip().lower()
+
+    if token in _TRUE_STRINGS:
+        return True
+
+    if token in _FALSE_STRINGS:
+        return False
+
+
 async def make_user_info(user: agtypes.User, bot=None, tguser=None) -> str:
     """
     Text representation of a user

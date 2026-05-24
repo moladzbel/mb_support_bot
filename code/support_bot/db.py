@@ -274,3 +274,11 @@ class SqlMessageMap(SqlRepo):
         async with self.engine.begin() as conn:
             result = await conn.execute(query)
             return result.fetchone()
+
+    async def get_by_user_msg(self, user_id: int, user_msg_id: int) -> SaRow | None:
+        query = sa.select(MessageMap).where(
+            (MessageMap.user_id == user_id) & (MessageMap.user_msg_id == user_msg_id)
+        )
+        async with self.engine.begin() as conn:
+            result = await conn.execute(query)
+            return result.fetchone()

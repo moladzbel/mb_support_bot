@@ -48,6 +48,31 @@ async def _group_hello(msg: agtypes.Message):
     await msg.bot.send_message(group.id, text)
 
 
+async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
+    """
+    If reply_as_reply is on and the user is replying to a message we have a
+    mapping for (either an earlier bot relay of an admin message, or one of
+    the user's own previous messages), send a marker bot message into the
+    topic anchored to the corresponding admin-side message. Falls back to an
+    unanchored marker if that admin-side message no longer exists.
+    """
+    bot, db = msg.bot, msg.bot.db
+    if not (bot.cfg['reply_as_reply'] and msg.reply_to_message):
+        return
+
+    mapping = await db.msgmap.get_by_user_msg(msg.from_user.id, msg.reply_to_message.message_id)
+    if not mapping:
+        return
+
+    await bot.send_message(
+        bot.cfg['admin_group_id'],
+        '<i>A reply to this message</i>',
+        message_thread_id=thread_id,
+        reply_parameters=ReplyParameters(message_id=mapping.admin_msg_id,
+                                         allow_sending_without_reply=True),
+    )
+
+
 async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     """
     Create a new topic for the user
@@ -62,13 +87,13 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     text = await make_user_info(user, bot=bot, tguser=tguser)
 
     if mode == SendMode.ALL:
-        text += '\n\n<i><b>Any</b> message in this topic will be sent to the user</i>'
+        text += '\n\n<i><b>Any</b> message in this topic will be sent to the user.</i>'
     elif mode == SendMode.ALL_EXCEPT_ADMINS:
         text += ('\n\n<i><b>Any</b> message in this topic will be sent '
-                 'to the user, except replies to another admin</i>')
-    else:
-        text += ('\n\n<i><b>Replies</b> to any bot message '
-                 'in this topic will be sent to the user</i>')
+                 'to the user, except replies to another admin.</i>')
+    elif mode == SendMode.REPLY:
+        text += ('\n\n<i>Only <b>replies</b> to a bot message '
+                 'in this topic will be sent to the user.</i>')
 
     await bot.send_message(group_id, text, message_thread_id=thread_id)
     return thread_id
@@ -110,13 +135,16 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
         if tguser := await db.tguser.get(user=user):
             if thread_id := tguser.thread_id:
                 try:
+                    await _send_reply_preface(msg, thread_id)
                     forwarded = await msg.forward(group_id, message_thread_id=thread_id)
                 except TelegramBadRequest as exc:  # the topic vanished for whatever reason
                     if 'thread not found' in exc.message.lower():
                         thread_id = await _new_topic(msg, tguser=tguser)
+                        await _send_reply_preface(msg, thread_id)
                         forwarded = await msg.forward(group_id, message_thread_id=thread_id)
             else:
                 thread_id = await _new_topic(msg, tguser=tguser)
+                await _send_reply_preface(msg, thread_id)
                 forwarded = await msg.forward(group_id, message_thread_id=thread_id)
 
             if tguser.first_replied:
@@ -133,6 +161,7 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
                 sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
                 await save_for_destruction(sentmsg, bot)
             tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
+            await _send_reply_preface(msg, thread_id)
             forwarded = await msg.forward(group_id, message_thread_id=thread_id)
 
         if forwarded:
@@ -162,6 +191,7 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
                                            allow_sending_without_reply=True)
 
     copied = await msg.copy_to(tguser.user_id, reply_parameters=reply_params)
+    await db.msgmap.add(msg.message_id, tguser.user_id, copied.message_id)
 
     await save_admin_message(msg, tguser)
     await save_for_destruction(copied, bot, chat_id=tguser.user_id)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from pathlib import Path
@@ -29,6 +30,7 @@ class SupportBot(Bot):
     def __init__(self, name: str, logger: logging.Logger):
         self.name = name
         self._logger = logger
+        self._user_locks: dict[int, asyncio.Lock] = {}
 
         self.botdir.mkdir(parents=True, exist_ok=True)
         token, self.cfg = self._read_config()
@@ -36,6 +38,18 @@ class SupportBot(Bot):
         self._load_menu()
 
         super().__init__(token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+    def user_lock(self, user_id: int) -> asyncio.Lock:
+        """
+        Per-user lock that serializes get-or-create of the user's tguser row
+        and admin-group topic, preventing duplicate topics when concurrent
+        messages arrive for a brand-new user.
+        """
+        lock = self._user_locks.get(user_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._user_locks[user_id] = lock
+        return lock
 
     @property
     def botdir(self) -> Path:

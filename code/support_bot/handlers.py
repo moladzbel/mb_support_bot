@@ -24,10 +24,11 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     sentmsg = await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
 
     new_user = False
-    if not await db.tguser.get(user=user):  # save user if it's new
-        thread_id = await _new_topic(msg)
-        await db.tguser.add(user, msg, thread_id)
-        new_user = True
+    async with bot.user_lock(user.id):
+        if not await db.tguser.get(user=user):  # save user if it's new
+            thread_id = await _new_topic(msg)
+            await db.tguser.add(user, msg, thread_id)
+            new_user = True
 
     await save_user_message(msg, new_user=new_user, stat=False)
     await save_for_destruction(msg, bot)
@@ -94,33 +95,34 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     group_id = msg.bot.cfg['admin_group_id']
     bot, user, db = msg.bot, msg.chat, msg.bot.db
 
-    if tguser := await db.tguser.get(user=user):
-        if thread_id := tguser.thread_id:
-            try:
-                await msg.forward(group_id, message_thread_id=thread_id)
-            except TelegramBadRequest as exc:  # the topic vanished for whatever reason
-                if 'thread not found' in exc.message.lower():
-                    thread_id = await _new_topic(msg, tguser=tguser)
+    async with bot.user_lock(user.id):
+        if tguser := await db.tguser.get(user=user):
+            if thread_id := tguser.thread_id:
+                try:
                     await msg.forward(group_id, message_thread_id=thread_id)
-        else:
-            thread_id = await _new_topic(msg, tguser=tguser)
-            await msg.forward(group_id, message_thread_id=thread_id)
+                except TelegramBadRequest as exc:  # the topic vanished for whatever reason
+                    if 'thread not found' in exc.message.lower():
+                        thread_id = await _new_topic(msg, tguser=tguser)
+                        await msg.forward(group_id, message_thread_id=thread_id)
+            else:
+                thread_id = await _new_topic(msg, tguser=tguser)
+                await msg.forward(group_id, message_thread_id=thread_id)
 
-        if tguser.first_replied:
-            await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
+            if tguser.first_replied:
+                await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
+            else:
+                if bot.cfg['first_reply']:
+                    sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
+                    await save_for_destruction(sentmsg, bot)
+                await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id, first_replied=True)
+
         else:
+            thread_id = await _new_topic(msg)
             if bot.cfg['first_reply']:
                 sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
                 await save_for_destruction(sentmsg, bot)
-            await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id, first_replied=True)
-
-    else:
-        thread_id = await _new_topic(msg)
-        if bot.cfg['first_reply']:
-            sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
-            await save_for_destruction(sentmsg, bot)
-        tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
-        await msg.forward(group_id, message_thread_id=thread_id)
+            tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
+            await msg.forward(group_id, message_thread_id=thread_id)
 
     await save_user_message(msg)
     await save_for_destruction(msg, bot)

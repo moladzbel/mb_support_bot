@@ -6,10 +6,10 @@ from aiogram.filters import Command
 from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
 from .informing import handle_error, log, save_admin_message, save_user_message
+from .const import SendMode
 from .filters import (
-    ACommandFilter, BtnInAdminGroup, BtnInPrivateChat, BotMention, InAdminGroup,
-    GroupChatCreatedFilter, MessageInAdminTopic, NewChatMembersFilter, PrivateChatFilter,
-    ReplyToBotInGroupForwardedFilter,
+    ACommandFilter, AdminMessageForUser, BtnInAdminGroup, BtnInPrivateChat, BotMention,
+    GroupChatCreatedFilter, InAdminGroup, NewChatMembersFilter, PrivateChatFilter,
 )
 from .utils import make_user_info, save_for_destruction
 
@@ -57,9 +57,13 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
 
+    mode = bot.cfg['send_mode']
     text = await make_user_info(user, bot=bot, tguser=tguser)
-    if bot.cfg.get('forward_all_topic_messages'):
-        text += ('\n\n<i><b>Any</b> message in this topic will be sent back '
+
+    if mode == SendMode.all:
+        text += '\n\n<i><b>Any</b> message in this topic will be sent to the user</i>'
+    elif mode == SendMode.all_except_admins:
+        text += ('\n\n<i><b>Any</b> message in this topic will be sent '
                  'to the user, except replies to another admin</i>')
     else:
         text += ('\n\n<i><b>Replies</b> to any bot message '
@@ -166,8 +170,7 @@ def register_handlers(dp: Dispatcher) -> None:
     Register all the handlers to the provided dispatcher
     """
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
-    dp.message.register(admin_message, ~ACommandFilter(), ReplyToBotInGroupForwardedFilter())
-    dp.message.register(admin_message, ~ACommandFilter(), MessageInAdminTopic())
+    dp.message.register(admin_message, ~ACommandFilter(), AdminMessageForUser())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
 
     dp.message.register(added_to_group, NewChatMembersFilter())

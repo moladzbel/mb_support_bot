@@ -2,6 +2,8 @@ import aiogram.types as agtypes
 from aiogram.enums.chat_type import ChatType
 from aiogram.filters import Filter
 
+from .const import SendMode
+
 
 class PrivateChatFilter(Filter):
 
@@ -27,43 +29,39 @@ class ACommandFilter(Filter):
         return str(getattr(msg, 'text', '')).startswith('/')
 
 
-class ReplyToBotInGroupForwardedFilter(Filter):
+class AdminMessageForUser(Filter):
     """
-    Checks that:
-    - it is a reply to a user
-    - made in the right group
-    - reply to a bot message
-    """
-    async def __call__(self, msg: agtypes.Message) -> bool:
-        if to_msg := msg.reply_to_message:
-            by_bot = to_msg.from_user.id == msg.bot.id
-            not_topic_reply = to_msg.message_id != msg.message_thread_id
-
-            group_id = int(msg.bot.cfg['admin_group_id'])
-            is_admin_group_1 = msg.chat.id == group_id
-            is_admin_group_2 = to_msg.chat.id == group_id
-
-            return by_bot and not_topic_reply and is_admin_group_1 and is_admin_group_2
-
-
-class MessageInAdminTopic(Filter):
-    """
-    Matches any message posted by an admin in a user topic of the admin group,
-    when forward_all_topic_messages is enabled. Excludes the bot's own messages
-    (topic header, forwarded user messages) and replies to other admins.
+    Matches an admin's message in a user topic of the admin group that should
+    be relayed to the user, according to the bot's send_mode:
+    - REPLY: only replies to a bot message (excluding the topic header).
+    - ALL: any admin message in the topic.
+    - ALL_EXCEPT_ADMINS: any admin message except replies to another admin.
+    The bot's own messages (topic header, forwarded user messages) are always excluded.
     """
     async def __call__(self, msg: agtypes.Message) -> bool:
-        if not msg.bot.cfg.get('forward_all_topic_messages'):
-            return False
         if msg.chat.id != int(msg.bot.cfg['admin_group_id']):
             return False
         if not msg.message_thread_id:
             return False
         if msg.from_user and msg.from_user.id == msg.bot.id:
             return False
-        if (to_msg := msg.reply_to_message) and to_msg.from_user.id != msg.bot.id:
-            return False
-        return True
+
+        to_msg = msg.reply_to_message
+        is_reply_to_bot = bool(
+            to_msg
+            and to_msg.from_user.id == msg.bot.id
+            and to_msg.message_id != msg.message_thread_id
+        )
+        is_reply_to_admin = bool(to_msg and to_msg.from_user.id != msg.bot.id)
+
+        mode = msg.bot.cfg['send_mode']
+        if mode == SendMode.reply:
+            return is_reply_to_bot
+        if mode == SendMode.all:
+            return True
+        if mode == SendMode.all_except_admins:
+            return not is_reply_to_admin
+        return False
 
 
 class InAdminGroup(Filter):

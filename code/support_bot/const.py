@@ -34,3 +34,13 @@ class ButtonMode:
 class MenuMode:
     column = 'column'
     row = 'row'
+
+
+class SendMode:
+    reply = 'REPLY'
+    all = 'ALL'
+    all_except_admins = 'ALL_EXCEPT_ADMINS'
+
+    @classmethod
+    def values(cls) -> tuple[str, ...]:
+        return (cls.reply, cls.all, cls.all_except_admins)

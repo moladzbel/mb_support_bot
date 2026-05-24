@@ -9,9 +9,8 @@ from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
 from .buttons import load_toml
-from .const import AdminBtn
+from .const import AdminBtn, SendMode
 from .db import SqlDb
-from .utils import parse_bool
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +24,7 @@ class SupportBot(Bot):
         'admin_group_id', 'hello_msg', 'first_reply', 'db_url', 'db_engine',
         'save_messages_gsheets_cred_file', 'save_messages_gsheets_filename', 'hello_ps',
         'destruct_user_messages_for_user', 'destruct_bot_messages_for_user',
-        'forward_all_topic_messages',
+        'send_mode',
     )
     botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
@@ -89,7 +88,11 @@ class SupportBot(Bot):
                 if not 1 <= cfg[var] <= 47:
                     raise ValueError(f'{var} must be between 1 and 47 (hours)')
 
-        cfg['forward_all_topic_messages'] = parse_bool(cfg.get('forward_all_topic_messages'))
+        mode = str(cfg.get('send_mode', SendMode.reply)).strip().upper()
+        if mode not in SendMode.values():
+            raise ValueError(f'{self.name}_SEND_MODE must be one of {", ".join(SendMode.values())}')
+
+        cfg['send_mode'] = mode
         cfg['hello_msg'] += cfg['hello_ps']
 
         return os.getenv(f'{self.name}_TOKEN'), cfg

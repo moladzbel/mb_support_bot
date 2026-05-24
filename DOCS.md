@@ -13,7 +13,10 @@ The following variables are available in `.env` file:
 - `{BOTNAME}_SAVE_MESSAGES_GSHEETS_FILENAME` - Optional. File name of a spreadsheet where to send all the messages.
 - `{BOTNAME}_DESTRUCT_USER_MESSAGES_FOR_USER` - Optional. If the bot should delete user messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
 - `{BOTNAME}_DESTRUCT_BOT_MESSAGES_FOR_USER` - Optional. If the bot should delete its own messages in the user chat after specified amount of hours. Accepted values are between 1 and 47.
-- `{BOTNAME}_FORWARD_ALL_TOPIC_MESSAGES` - Optional. If set to `1`/`true`/`yes`/`on`, every admin message posted in a user topic is sent to the user, not only replies to the bot's messages. Replies to another admin's message in the topic are still excluded. Default is off.
+- `{BOTNAME}_SEND_MODE` - Optional. Controls which admin messages in a user topic are sent to the user. Case-insensitive. One of:
+    - `REPLY` (default) - only replies to a bot message are sent.
+    - `ALL` - every admin message in the topic is sent.
+    - `ALL_EXCEPT_ADMINS` - every admin message in the topic is sent, except replies to another admin's message.
 
 ## Styling messages
 

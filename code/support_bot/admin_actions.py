@@ -25,7 +25,7 @@ async def del_old_topics(call: agtypes.CallbackQuery):
     """
     msg = call.message
     bot, db = msg.bot, msg.bot.db
-    await msg.answer(bot.admin_menu[AdminBtn.del_old_topics]['answer'])
+    await msg.answer(bot.admin_menu[AdminBtn.DEL_OLD_TOPICS]['answer'])
 
     i = 0
     for tguser in await db.tguser.get_olds():
@@ -56,7 +56,7 @@ async def admin_broadcast_start(call: agtypes.CallbackQuery, dispatcher: Dispatc
     state = FSMContext(dispatcher.storage, key)
 
     await state.set_state(BroadcastForm.message)
-    await msg.answer(bot.admin_menu[AdminBtn.broadcast]['answer'])
+    await msg.answer(bot.admin_menu[AdminBtn.BROADCAST]['answer'])
 
 
 @log

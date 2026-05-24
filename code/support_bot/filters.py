@@ -55,11 +55,11 @@ class AdminMessageForUser(Filter):
         is_reply_to_admin = bool(to_msg and to_msg.from_user.id != msg.bot.id)
 
         mode = msg.bot.cfg['send_mode']
-        if mode == SendMode.reply:
+        if mode == SendMode.REPLY:
             return is_reply_to_bot
-        if mode == SendMode.all:
+        if mode == SendMode.ALL:
             return True
-        if mode == SendMode.all_except_admins:
+        if mode == SendMode.ALL_EXCEPT_ADMINS:
             return not is_reply_to_admin
         return False
 

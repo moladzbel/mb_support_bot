@@ -88,13 +88,10 @@ class SupportBot(Bot):
                 if not 1 <= cfg[var] <= 47:
                     raise ValueError(f'{var} must be between 1 and 47 (hours)')
 
-        mode = str(cfg.get('send_mode', SendMode.reply)).strip().upper()
-        if mode not in SendMode.values():
-            raise ValueError(f'{self.name}_SEND_MODE must be one of {", ".join(SendMode.values())}')
+        cfg['send_mode'] = cfg.get('send_mode') or SendMode.REPLY
+        SendMode.validate(cfg['send_mode'], raise_exc=True)
 
-        cfg['send_mode'] = mode
         cfg['hello_msg'] += cfg['hello_ps']
-
         return os.getenv(f'{self.name}_TOKEN'), cfg
 
     def _configure_db(self) -> None:
@@ -126,9 +123,9 @@ class SupportBot(Bot):
             self.menu['answer'] = self.cfg['hello_msg']
 
         self.admin_menu = {
-            AdminBtn.broadcast: {'label': '📢 Broadcast to all subscribers',
+            AdminBtn.BROADCAST: {'label': '📢 Broadcast to all subscribers',
                                  'answer': ("Send here a message to broadcast, and then I'll ask "
                                             "for confirmation")},
-            AdminBtn.del_old_topics: {'label': '🧹 Delete topics older than 2 weeks',
+            AdminBtn.DEL_OLD_TOPICS: {'label': '🧹 Delete topics older than 2 weeks',
                                       'answer': ('Deleting topics older than 2 weeks...')},
         }

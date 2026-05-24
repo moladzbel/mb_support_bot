@@ -60,9 +60,9 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     mode = bot.cfg['send_mode']
     text = await make_user_info(user, bot=bot, tguser=tguser)
 
-    if mode == SendMode.all:
+    if mode == SendMode.ALL:
         text += '\n\n<i><b>Any</b> message in this topic will be sent to the user</i>'
-    elif mode == SendMode.all_except_admins:
+    elif mode == SendMode.ALL_EXCEPT_ADMINS:
         text += ('\n\n<i><b>Any</b> message in this topic will be sent '
                  'to the user, except replies to another admin</i>')
     else:

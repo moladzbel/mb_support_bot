@@ -71,33 +71,33 @@ def determine_msg_type(msg: agtypes.Message) -> str:
     Determine a type of the message by inspecting its content
     """
     if msg.photo:
-        return MsgType.photo
+        return MsgType.PHOTO
     elif msg.video:
-        return MsgType.video
+        return MsgType.VIDEO
     elif msg.animation:
-        return MsgType.animation
+        return MsgType.ANIMATION
     elif msg.sticker:
-        return MsgType.sticker
+        return MsgType.STICKER
     elif msg.audio:
-        return MsgType.audio
+        return MsgType.AUDIO
     elif msg.voice:
-        return MsgType.voice
+        return MsgType.VOICE
     elif msg.document:
-        return MsgType.document
+        return MsgType.DOCUMENT
     elif msg.video_note:
-        return MsgType.video_note
+        return MsgType.VIDEO_NOTE
     elif msg.contact:
-        return MsgType.contact
+        return MsgType.CONTACT
     elif msg.location:
-        return MsgType.location
+        return MsgType.LOCATION
     elif msg.venue:
-        return MsgType.venue
+        return MsgType.VENUE
     elif msg.poll:
-        return MsgType.poll
+        return MsgType.POLL
     elif msg.dice:
-        return MsgType.dice
+        return MsgType.DICE
     else:
-        return MsgType.regular_or_other
+        return MsgType.REGULAR_OR_OTHER
 
 
 async def destruct_messages(bots: list) -> None:

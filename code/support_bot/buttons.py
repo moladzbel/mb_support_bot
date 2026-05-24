@@ -23,7 +23,22 @@ def load_toml(path: Path) -> dict | None:
     """
     if path.is_file():
         with open(path) as f:
-            return toml.load(f)
+            menu = toml.load(f)
+        _validate_menu_modes(menu)
+        return menu
+
+
+def _validate_menu_modes(menu: dict) -> None:
+    """
+    Recursively check any 'menumode' entries against MenuMode at startup,
+    so typos like menumode = "rows" fail loudly instead of silently falling
+    back to the default layout.
+    """
+    for key, val in menu.items():
+        if key == 'menumode':
+            MenuMode.validate(val, raise_exc=True)
+        elif isinstance(val, dict):
+            _validate_menu_modes(val)
 
 
 class CBD(CallbackData, prefix='_'):
@@ -43,25 +58,25 @@ class Button:
         self.content = content
         self._recognize_mode()
 
-        empty_answer_allowed = self.mode in (ButtonMode.link, ButtonMode.file)
+        empty_answer_allowed = self.mode in (ButtonMode.LINK, ButtonMode.FILE)
         self.answer = _extract_answer(content, empty=empty_answer_allowed)
 
     def _recognize_mode(self) -> None:
         if 'link' in self.content:
-            self.mode = ButtonMode.link
+            self.mode = ButtonMode.LINK
         elif 'file' in self.content:
-            self.mode = ButtonMode.file
+            self.mode = ButtonMode.FILE
         elif any([isinstance(v, dict) and 'label' in v for v in self.content.values()]):
-            self.mode = ButtonMode.menu
+            self.mode = ButtonMode.MENU
         elif 'subject' in self.content:
-            self.mode = ButtonMode.subject
+            self.mode = ButtonMode.SUBJECT
         elif 'answer' in self.content:
-            self.mode = ButtonMode.answer
+            self.mode = ButtonMode.ANSWER
 
     def as_inline(self, callback_data : str | None=None) -> InlineKeyboardButton:
-        if self.mode in (ButtonMode.file, ButtonMode.answer, ButtonMode.menu, ButtonMode.subject):
+        if self.mode in (ButtonMode.FILE, ButtonMode.ANSWER, ButtonMode.MENU, ButtonMode.SUBJECT):
             return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
-        elif self.mode == ButtonMode.link:
+        elif self.mode == ButtonMode.LINK:
             return InlineKeyboardButton(text=self.content['label'], url=self.content['link'])
         raise ValueError('Unexpected button mode')
 
@@ -95,7 +110,7 @@ def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuild
     for key, val in menu.items():
         if btn := _create_button(val):
             cbd = CBD(path=path, code=key, msgid=msgid).pack()
-            if menu.get('menumode') == MenuMode.row:
+            if menu.get('menumode') == MenuMode.ROW:
                 builder.button(text=btn.content['label'], callback_data=cbd)
             else:
                 builder.row(btn.as_inline(cbd))
@@ -146,13 +161,13 @@ async def user_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
         sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, bot.menu)
 
     elif btn := _create_button(menuitem):
-        if btn.mode == ButtonMode.menu:
+        if btn.mode == ButtonMode.MENU:
             sentmsg = await edit_or_send_new_msg_with_keyboard(bot, chat.id, cbd, menuitem, path)
-        elif btn.mode == ButtonMode.file:
+        elif btn.mode == ButtonMode.FILE:
             sentmsg = await send_file(bot, chat.id, menuitem)
-        elif btn.mode == ButtonMode.answer:
+        elif btn.mode == ButtonMode.ANSWER:
             sentmsg = await msg.answer(btn.answer)
-        elif btn.mode == ButtonMode.subject:
+        elif btn.mode == ButtonMode.SUBJECT:
             sentmsg = await set_subject(bot, chat, menuitem)
 
     await save_for_destruction(sentmsg, bot)
@@ -168,9 +183,9 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     """
     cbd = CBD.unpack(call.data)
 
-    if cbd.code == AdminBtn.del_old_topics:
+    if cbd.code == AdminBtn.DEL_OLD_TOPICS:
         await del_old_topics(call)
-    elif cbd.code == AdminBtn.broadcast:
+    elif cbd.code == AdminBtn.BROADCAST:
         await admin_broadcast_start(call, kwargs['dispatcher'])
 
     return await call.answer()
@@ -244,6 +259,6 @@ def build_confirm_menu(yes_answer: str='Confirmed', no_answer: str='Canceled') -
     menu = {
         'yes': {'label': '✅ Yes', 'answer': yes_answer},
         'no': {'label': '🚫 No', 'answer': no_answer},
-        'menumode': MenuMode.row,
+        'menumode': MenuMode.ROW,
     }
     return menu

@@ -17,7 +17,7 @@ The following variables are available in `.env` file:
     - `reply` (default) - only replies to a bot message are sent.
     - `all` - every admin message in the topic is sent.
     - `all_except_admins` - every admin message in the topic is sent, except replies to another admin's message.
-- `{BOTNAME}_REPLY_AS_REPLY` - Optional. Default `false`. When `true`, reply context is preserved in two directions: (a) an admin replying in the topic to a forwarded user message is delivered to the user as a reply to that user's original message; (b) a user replying in DM to a previous bot message (or to one of their own earlier messages) is forwarded to the topic prefaced by a bot-sent marker "A reply to this message" anchored to the corresponding admin-side message. Accepted values: `1/true/yes/on/y/t` and `0/false/no/off/n/f` (case-insensitive).
+- `{BOTNAME}_REPLY_AS_REPLY` - Optional. Default `false`. When `true`, reply context is preserved in two directions: (a) an admin replying in the topic to a forwarded user message is delivered to the user as a reply to that user's original message; (b) a user replying in DM to a previous bot message (or to one of their own earlier messages) is forwarded to the topic prefaced by a bot-sent marker anchored to the corresponding admin-side message. Accepted values: `1/true/yes/on/y/t` and `0/false/no/off/n/f` (case-insensitive).
 
 ## Styling messages
 

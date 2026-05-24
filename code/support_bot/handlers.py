@@ -48,6 +48,28 @@ async def _group_hello(msg: agtypes.Message):
     await msg.bot.send_message(group.id, text)
 
 
+async def _send_into_topic(bot, group_id: int, thread_id: int, coro):
+    """
+    Run a send/forward coroutine targeting a topic and confirm Telegram placed
+    the result in that topic. If the topic was deleted, Telegram may silently
+    route the message to General instead of raising. Detect that case, delete
+    the stray, and return None so the caller can recover.
+    """
+    try:
+        sent = await coro
+    except TelegramBadRequest as exc:
+        if 'thread not found' in exc.message.lower():
+            return None
+        raise
+    if sent.message_thread_id != thread_id:
+        try:
+            await bot.delete_message(group_id, sent.message_id)
+        except TelegramBadRequest:
+            pass
+        return None
+    return sent
+
+
 async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
     """
     If reply_as_reply is on and the user is replying to a message we have a
@@ -64,13 +86,15 @@ async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
     if not mapping:
         return
 
-    await bot.send_message(
-        bot.cfg['admin_group_id'],
-        '<i>A reply to this message</i>',
+    group_id = bot.cfg['admin_group_id']
+    coro = bot.send_message(
+        group_id,
+        ' ㅤ ',
         message_thread_id=thread_id,
         reply_parameters=ReplyParameters(message_id=mapping.admin_msg_id,
                                          allow_sending_without_reply=True),
     )
+    await _send_into_topic(bot, group_id, thread_id, coro)
 
 
 async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
@@ -120,49 +144,51 @@ async def group_chat_created(msg: agtypes.Message, *args, **kwargs):
     await _group_hello(msg)
 
 
+async def _preface_and_forward(msg: agtypes.Message, thread_id: int):
+    """
+    Send the optional reply-context preface, then forward the user's message
+    into the topic. Returns the forwarded Message, or None if the topic
+    appears to be dead so the caller can recreate it and retry.
+    """
+    bot = msg.bot
+    group_id = bot.cfg['admin_group_id']
+
+    await _send_reply_preface(msg, thread_id)
+    coro = msg.forward(group_id, message_thread_id=thread_id)
+    return await _send_into_topic(bot, group_id, thread_id, coro)
+
+
 @log
 @handle_error
 async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
-    Create topic and a user row in db if needed,
-    then forward user message to internal admin group
+    Create or reuse the user's row and admin-group topic,
+    then forward the user message there.
     """
-    group_id = msg.bot.cfg['admin_group_id']
     bot, user, db = msg.bot, msg.chat, msg.bot.db
 
-    forwarded = None
     async with bot.user_lock(user.id):
-        if tguser := await db.tguser.get(user=user):
-            if thread_id := tguser.thread_id:
-                try:
-                    await _send_reply_preface(msg, thread_id)
-                    forwarded = await msg.forward(group_id, message_thread_id=thread_id)
-                except TelegramBadRequest as exc:  # the topic vanished for whatever reason
-                    if 'thread not found' in exc.message.lower():
-                        thread_id = await _new_topic(msg, tguser=tguser)
-                        await _send_reply_preface(msg, thread_id)
-                        forwarded = await msg.forward(group_id, message_thread_id=thread_id)
-            else:
-                thread_id = await _new_topic(msg, tguser=tguser)
-                await _send_reply_preface(msg, thread_id)
-                forwarded = await msg.forward(group_id, message_thread_id=thread_id)
+        tguser = await db.tguser.get(user=user)
+        thread_id = tguser.thread_id if tguser else None
 
-            if tguser.first_replied:
-                await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id)
-            else:
-                if bot.cfg['first_reply']:
-                    sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
-                    await save_for_destruction(sentmsg, bot)
-                await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id, first_replied=True)
+        forwarded = None
+        if thread_id:
+            forwarded = await _preface_and_forward(msg, thread_id)
+            if forwarded is None:  # topic was deleted
+                thread_id = None
 
+        if not thread_id:
+            thread_id = await _new_topic(msg, tguser=tguser)
+            forwarded = await _preface_and_forward(msg, thread_id)
+
+        if (tguser is None or not tguser.first_replied) and bot.cfg['first_reply']:
+            sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
+            await save_for_destruction(sentmsg, bot)
+
+        if tguser:
+            await db.tguser.update(user.id, user_msg=msg, thread_id=thread_id, first_replied=True)
         else:
-            thread_id = await _new_topic(msg)
-            if bot.cfg['first_reply']:
-                sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
-                await save_for_destruction(sentmsg, bot)
-            tguser = await db.tguser.add(user, msg, thread_id, first_replied=True)
-            await _send_reply_preface(msg, thread_id)
-            forwarded = await msg.forward(group_id, message_thread_id=thread_id)
+            await db.tguser.add(user, msg, thread_id, first_replied=True)
 
         if forwarded:
             await db.msgmap.add(forwarded.message_id, user.id, msg.message_id)

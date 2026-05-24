@@ -1,8 +1,8 @@
-aiogram==3.18.0
-aiosqlite==0.20.0
-alembic==1.13.1
-apscheduler==3.10.4
+aiogram==3.28.2
+aiosqlite==0.22.1
+alembic==1.18.4
+apscheduler==3.11.2
 gspread-asyncio==2.0.0
-python-dotenv==1.0.1
-SQLAlchemy==2.0.27
+python-dotenv==1.2.2
+SQLAlchemy==2.0.49
 toml==0.10.2

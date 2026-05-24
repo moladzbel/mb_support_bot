@@ -101,6 +101,7 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
         await bot.edit_message_text(chat_id=msg.chat.id, message_id=cbd.msgid, text=text)
 
         success_count = 0
+        forbidden_count = 0
         users = await bot.db.tguser.get_all()
         for i, user in enumerate(users):
             while True:
@@ -113,6 +114,7 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
                     await bot.log(f'Throttled by Telegram, sleeping {exc.retry_after}s')
                     await asyncio.sleep(exc.retry_after)
                 except TelegramForbiddenError:
+                    forbidden_count += 1
                     break
                 except Exception as exc:
                     await bot.log_error(exc, traceback=False)
@@ -125,7 +127,12 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
 
         res_str = f'{success_count}/{len(users)}'
         await bot.log(f'Broadcasting is done: {res_str}')
-        await msg.answer(f'Broadcasting is done 🫡. {res_str} users received the message.')
+
+        report = f'Broadcasting is done 🫡. {res_str} users received the message.'
+        if forbidden_count:
+            postfix = 's' if forbidden_count > 1 else ''
+            report += f' Messages to {forbidden_count} user{postfix} were forbidden by Telegram.'
+        await msg.answer(report)
 
     elif cbd.code == 'no':
         text = 'Broadcasting canceled'

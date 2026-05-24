@@ -14,7 +14,7 @@ from .utils import make_short_user_info
 
 def log(func):
     """
-    Decorator. Logs actions
+    Decorator to log an action
     """
     async def wrapper(msg: agtypes.Message, *args, **kwargs):
         await msg.bot.log(func.__name__)
@@ -26,7 +26,7 @@ def log(func):
 
 def handle_error(func):
     """
-    Decorator. Processes any exception in a handler
+    Decorator to process any exception in a handler
     """
     async def wrapper(msg: agtypes.Message, *args, **kwargs):
         try:

@@ -7,7 +7,7 @@ import datetime
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
-from .enums import ActionName
+from .const import ActionName
 from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
 from .utils import make_short_user_info
 

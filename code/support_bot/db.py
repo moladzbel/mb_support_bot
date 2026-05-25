@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import false
 
-from .enums import ActionName
+from .const import ActionName
 
 
 Base = declarative_base()

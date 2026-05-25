@@ -49,7 +49,7 @@ async def report_user_ban(msg: agtypes.Message, func) -> None:
     Report when the user banned the bot
     """
     bot = msg.bot
-    thread_id = msg.message_thread_id
+    thread_id = getattr(msg, 'message_thread_id', None)
 
     if func.__name__ == 'admin_message' and await bot.db.tguser.get(thread_id=thread_id):
         group_id = bot.cfg['admin_group_id']

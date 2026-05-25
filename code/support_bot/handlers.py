@@ -1,8 +1,9 @@
 import aiogram.types as agtypes
 from aiogram import Dispatcher
+from aiogram.enums.chat_type import ChatType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.types import ReplyParameters
+from aiogram.types import ReactionTypeEmoji, ReplyParameters
 
 from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
@@ -72,14 +73,14 @@ async def _send_into_topic(bot, group_id: int, thread_id: int, coro):
 
 async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
     """
-    If reply_as_reply is on and the user is replying to a message we have a
+    If mirror_replies is on and the user is replying to a message we have a
     mapping for (either an earlier bot relay of an admin message, or one of
     the user's own previous messages), send a marker bot message into the
     topic anchored to the corresponding admin-side message. Falls back to an
     unanchored marker if that admin-side message no longer exists.
     """
     bot, db = msg.bot, msg.bot.db
-    if not (bot.cfg['reply_as_reply'] and msg.reply_to_message):
+    if not (bot.cfg['mirror_replies'] and msg.reply_to_message):
         return
 
     mapping = await db.msgmap.get_by_user_msg(msg.from_user.id, msg.reply_to_message.message_id)
@@ -201,7 +202,7 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
 @handle_error
 async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
-    Copy admin reply to a user. If reply_as_reply is on and the admin replied
+    Copy admin reply to a user. If mirror_replies is on and the admin replied
     to a forwarded user message, anchor the copy to that user's original message.
     """
     bot, db = msg.bot, msg.bot.db
@@ -211,7 +212,7 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
         return
 
     reply_params = None
-    if bot.cfg['reply_as_reply'] and msg.reply_to_message:
+    if bot.cfg['mirror_replies'] and msg.reply_to_message:
         if mapping := await db.msgmap.get(msg.reply_to_message.message_id):
             reply_params = ReplyParameters(message_id=mapping.user_msg_id,
                                            allow_sending_without_reply=True)
@@ -221,6 +222,48 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
 
     await save_admin_message(msg, tguser)
     await save_for_destruction(copied, bot, chat_id=tguser.user_id)
+
+
+def _mirror_reaction(update: agtypes.MessageReactionUpdated) -> list:
+    """
+    The reaction to mirror to the other side: a single standard emoji, or an
+    empty list to clear (when the reaction was removed or is a custom emoji,
+    which bots can't set).
+    """
+    for reaction in update.new_reaction:
+        if isinstance(reaction, ReactionTypeEmoji):
+            return [ReactionTypeEmoji(emoji=reaction.emoji)]
+    return []
+
+
+@log
+@handle_error
+async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwargs) -> None:
+    """
+    Mirror a reaction between a user message and its counterpart in the admin
+    topic, in either direction, using the message_map pairing.
+    """
+    bot, db = update.bot, update.bot.db
+    if not bot.cfg['mirror_reactions']:
+        return
+
+    reaction = _mirror_reaction(update)
+
+    if update.chat.type == ChatType.PRIVATE:  # user -> admin
+        mapping = await db.msgmap.get_by_user_msg(update.chat.id, update.message_id)
+        target = (bot.cfg['admin_group_id'], mapping.admin_msg_id) if mapping else None
+    elif update.chat.id == int(bot.cfg['admin_group_id']):  # admin -> user
+        if not update.user:  # anonymous admin, nobody to attribute it to
+            return
+        mapping = await db.msgmap.get(update.message_id)
+        target = (mapping.user_id, mapping.user_msg_id) if mapping else None
+    else:
+        return
+
+    if not target:
+        return
+
+    await bot.set_message_reaction(target[0], target[1], reaction=reaction)
 
 
 @log
@@ -251,3 +294,5 @@ def register_handlers(dp: Dispatcher) -> None:
 
     dp.callback_query.register(user_btn_handler, BtnInPrivateChat())
     dp.callback_query.register(admin_btn_handler, BtnInAdminGroup())
+
+    dp.message_reaction.register(reaction_changed)

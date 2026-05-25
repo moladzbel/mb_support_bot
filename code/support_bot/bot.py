@@ -25,7 +25,7 @@ class SupportBot(Bot):
         'admin_group_id', 'hello_msg', 'first_reply', 'db_url', 'db_engine',
         'save_messages_gsheets_cred_file', 'save_messages_gsheets_filename', 'hello_ps',
         'destruct_user_messages_for_user', 'destruct_bot_messages_for_user',
-        'send_mode', 'reply_as_reply',
+        'send_mode', 'mirror_replies', 'mirror_reactions',
     )
     botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
 
@@ -96,7 +96,8 @@ class SupportBot(Bot):
         cfg['send_mode'] = cfg.get('send_mode') or SendMode.REPLY
         SendMode.validate(cfg['send_mode'], raise_exc=True)
 
-        cfg['reply_as_reply'] = parse_bool(cfg.get('reply_as_reply'))
+        cfg['mirror_replies'] = parse_bool(cfg.get('mirror_replies'))
+        cfg['mirror_reactions'] = parse_bool(cfg.get('mirror_reactions'))
         cfg['hello_msg'] += cfg['hello_ps']
 
         return os.getenv(f'{self.name}_TOKEN'), cfg

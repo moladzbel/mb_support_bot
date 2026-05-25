@@ -39,7 +39,7 @@ class AdminMessageForUser(Filter):
     The bot's own messages (topic header, forwarded user messages) are always excluded.
     """
     async def __call__(self, msg: agtypes.Message) -> bool:
-        if msg.chat.id != int(msg.bot.cfg['admin_group_id']):
+        if msg.chat.id != msg.bot.cfg.admin_group_id:
             return False
         if not msg.message_thread_id:
             return False
@@ -54,7 +54,7 @@ class AdminMessageForUser(Filter):
         )
         is_reply_to_admin = bool(to_msg and to_msg.from_user.id != msg.bot.id)
 
-        mode = msg.bot.cfg['send_mode']
+        mode = msg.bot.cfg.send_mode
         if mode == SendMode.REPLY:
             return is_reply_to_bot
         if mode == SendMode.ALL:
@@ -70,7 +70,7 @@ class InAdminGroup(Filter):
     in General topic (message_thread_id is None)
     """
     async def __call__(self, msg: agtypes.Message) -> bool:
-        is_admin_group = msg.chat.id == int(msg.bot.cfg['admin_group_id'])
+        is_admin_group = msg.chat.id == msg.bot.cfg.admin_group_id
         return is_admin_group and not msg.message_thread_id
 
 
@@ -89,7 +89,7 @@ class BtnInAdminGroup(Filter):
     """
     async def __call__(self, call: agtypes.CallbackQuery) -> bool:
         msg = call.message
-        return msg.chat.id == int(msg.bot.cfg['admin_group_id'])
+        return msg.chat.id == msg.bot.cfg.admin_group_id
 
 
 class BtnInPrivateChat(Filter):

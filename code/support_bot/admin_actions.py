@@ -31,7 +31,7 @@ async def del_old_topics(call: agtypes.CallbackQuery):
     for tguser in await db.tguser.get_olds():
         if tguser.thread_id:
             try:
-                await bot.delete_forum_topic(bot.cfg['admin_group_id'], tguser.thread_id)
+                await bot.delete_forum_topic(bot.cfg.admin_group_id, tguser.thread_id)
                 i += 1
             except TelegramBadRequest as exc:
                 await bot.log_error(exc)
@@ -79,7 +79,7 @@ async def admin_broadcast_ask_confirm(msg: agtypes.Message, state: FSMContext,
     await asyncio.sleep(0.1)
 
     text = 'Send this 👆 message to all the bot users?'
-    await send_new_msg_with_keyboard(bot, bot.cfg['admin_group_id'], text, build_confirm_menu())
+    await send_new_msg_with_keyboard(bot, bot.cfg.admin_group_id, text, build_confirm_menu())
 
 
 @log

@@ -52,7 +52,7 @@ async def report_user_ban(msg: agtypes.Message, func) -> None:
     thread_id = getattr(msg, 'message_thread_id', None)
 
     if func.__name__ == 'admin_message' and await bot.db.tguser.get(thread_id=thread_id):
-        group_id = bot.cfg['admin_group_id']
+        group_id = bot.cfg.admin_group_id
         await bot.send_message(
             group_id, 'The user banned the bot', message_thread_id=thread_id,
         )
@@ -66,7 +66,7 @@ async def report_cant_create_topic(msg: agtypes.Message) -> None:
     user = msg.chat
 
     await msg.bot.send_message(
-        msg.bot.cfg['admin_group_id'],
+        msg.bot.cfg.admin_group_id,
         (f'New user <b>{make_short_user_info(user=user)}</b> writes to the bot, '
          'but the bot has not enough rights to create a topic.\n\n️️️❗ '
          'Make the bot admin, and give it a "Manage topics" permission.'),
@@ -78,8 +78,8 @@ async def save_admin_message(msg: agtypes.Message, tguser) -> None:
     Entrypoint for all the mechanisms of saving messages sent by admin.
     There is only one currently: Google Sheets.
     """
-    gsheets_cred_file = msg.bot.cfg.get('save_messages_gsheets_cred_file', None)
-    gsheets_filename = msg.bot.cfg.get('save_messages_gsheets_filename', None)
+    gsheets_cred_file = msg.bot.cfg.save_messages_gsheets_cred_file
+    gsheets_filename = msg.bot.cfg.save_messages_gsheets_filename
     if gsheets_cred_file and gsheets_filename:
         await gsheets_save_admin_message(msg, tguser)
 
@@ -95,8 +95,8 @@ async def save_user_message(
     """
     bot = msg.bot
 
-    gsheets_cred_file = bot.cfg.get('save_messages_gsheets_cred_file', None)
-    gsheets_filename = bot.cfg.get('save_messages_gsheets_filename', None)
+    gsheets_cred_file = bot.cfg.save_messages_gsheets_cred_file
+    gsheets_filename = bot.cfg.save_messages_gsheets_filename
     if gsheets_cred_file and gsheets_filename:
         await gsheets_save_user_message(msg, highlight=new_user)
 
@@ -126,4 +126,4 @@ async def stats_to_admin_chat(bots: list) -> None:
             msg += '- Nothing yet\n'
 
         msg += '\n#stats'
-        await bot.send_message(bot.cfg['admin_group_id'], msg)
+        await bot.send_message(bot.cfg.admin_group_id, msg)

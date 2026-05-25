@@ -23,7 +23,7 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     Reply to /start
     """
     bot, user, db = msg.bot, msg.chat, msg.bot.db
-    sentmsg = await send_new_msg_with_keyboard(bot, user.id, bot.cfg['hello_msg'], bot.menu)
+    sentmsg = await send_new_msg_with_keyboard(bot, user.id, bot.cfg.hello_msg, bot.menu)
 
     new_user = False
     async with bot.user_lock(user.id):
@@ -80,14 +80,14 @@ async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
     unanchored marker if that admin-side message no longer exists.
     """
     bot, db = msg.bot, msg.bot.db
-    if not (bot.cfg['mirror_replies'] and msg.reply_to_message):
+    if not (bot.cfg.mirror_replies and msg.reply_to_message):
         return
 
     mapping = await db.msgmap.get_by_user_msg(msg.from_user.id, msg.reply_to_message.message_id)
     if not mapping:
         return
 
-    group_id = bot.cfg['admin_group_id']
+    group_id = bot.cfg.admin_group_id
     coro = bot.send_message(
         group_id,
         ' ㅤ ',
@@ -102,13 +102,13 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
     """
     Create a new topic for the user
     """
-    group_id = msg.bot.cfg['admin_group_id']
+    group_id = msg.bot.cfg.admin_group_id
     user, bot = msg.chat, msg.bot
 
     response = await bot.create_forum_topic(group_id, user.full_name)
     thread_id = response.message_thread_id
 
-    mode = bot.cfg['send_mode']
+    mode = bot.cfg.send_mode
     text = await make_user_info(user, bot=bot, tguser=tguser)
 
     if mode == SendMode.ALL:
@@ -152,7 +152,7 @@ async def _preface_and_forward(msg: agtypes.Message, thread_id: int):
     appears to be dead so the caller can recreate it and retry.
     """
     bot = msg.bot
-    group_id = bot.cfg['admin_group_id']
+    group_id = bot.cfg.admin_group_id
 
     await _send_reply_preface(msg, thread_id)
     coro = msg.forward(group_id, message_thread_id=thread_id)
@@ -182,8 +182,8 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
             thread_id = await _new_topic(msg, tguser=tguser)
             forwarded = await _preface_and_forward(msg, thread_id)
 
-        if (tguser is None or not tguser.first_replied) and bot.cfg['first_reply']:
-            sentmsg = await bot.send_message(user.id, bot.cfg['first_reply'])
+        if (tguser is None or not tguser.first_replied) and bot.cfg.first_reply:
+            sentmsg = await bot.send_message(user.id, bot.cfg.first_reply)
             await save_for_destruction(sentmsg, bot)
 
         if tguser:
@@ -212,7 +212,7 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
         return
 
     reply_params = None
-    if bot.cfg['mirror_replies'] and msg.reply_to_message:
+    if bot.cfg.mirror_replies and msg.reply_to_message:
         if mapping := await db.msgmap.get(msg.reply_to_message.message_id):
             reply_params = ReplyParameters(message_id=mapping.user_msg_id,
                                            allow_sending_without_reply=True)
@@ -244,15 +244,15 @@ async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwar
     topic, in either direction, using the message_map pairing.
     """
     bot, db = update.bot, update.bot.db
-    if not bot.cfg['mirror_reactions']:
+    if not bot.cfg.mirror_reactions:
         return
 
     reaction = _mirror_reaction(update)
 
     if update.chat.type == ChatType.PRIVATE:  # user -> admin
         mapping = await db.msgmap.get_by_user_msg(update.chat.id, update.message_id)
-        target = (bot.cfg['admin_group_id'], mapping.admin_msg_id) if mapping else None
-    elif update.chat.id == int(bot.cfg['admin_group_id']):  # admin -> user
+        target = (bot.cfg.admin_group_id, mapping.admin_msg_id) if mapping else None
+    elif update.chat.id == bot.cfg.admin_group_id:  # admin -> user
         if not update.user:  # anonymous admin, nobody to attribute it to
             return
         mapping = await db.msgmap.get(update.message_id)

@@ -6,24 +6,6 @@ import aiogram.types as agtypes
 from .const import MsgType
 
 
-_TRUE_STRINGS = frozenset(('1', 'true', 'yes', 'on', 'y', 't'))
-_FALSE_STRINGS = frozenset(('0', 'false', 'no', 'off', 'n', 'f'))
-
-
-def parse_bool(value) -> bool | None:
-    """
-    Parse a string into a bool. Returns True for 1/true/yes/on/y/t,
-    False for 0/false/no/off/n/f (case-insensitive), and None otherwise.
-    """
-    token = str(value).strip().lower()
-
-    if token in _TRUE_STRINGS:
-        return True
-
-    if token in _FALSE_STRINGS:
-        return False
-
-
 async def make_user_info(user: agtypes.User, bot=None, tguser=None) -> str:
     """
     Text representation of a user
@@ -108,7 +90,7 @@ async def destruct_messages(bots: list) -> None:
         destructed = 0
 
         for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
-            if val := bot.cfg.get(var):
+            if val := getattr(bot.cfg, var):
                 error_reported = False
                 by_bot = var == 'destruct_bot_messages_for_user'
                 before = datetime.datetime.utcnow() - datetime.timedelta(hours=val)
@@ -137,7 +119,7 @@ async def save_for_destruction(msg, bot, chat_id=None):
         return
 
     if chat_id:  # special case when there is no full msg object
-        if bot.cfg.get('destruct_bot_messages_for_user'):
+        if bot.cfg.destruct_bot_messages_for_user:
             await bot.db.msgtodel.add(msg, chat_id=chat_id)
         return
 
@@ -145,5 +127,5 @@ async def save_for_destruction(msg, bot, chat_id=None):
     if msg.from_user.is_bot:
         var = 'destruct_bot_messages_for_user'
 
-    if bot.cfg.get(var):
+    if getattr(bot.cfg, var):
         await bot.db.msgtodel.add(msg)

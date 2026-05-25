@@ -209,7 +209,7 @@ async def set_subject(bot, user: agtypes.User, menuitem: dict) -> agtypes.Messag
     Set the chosen subject to the user and report that.
     """
     newsubj = menuitem['subject']
-    group_id = bot.cfg['admin_group_id']
+    group_id = bot.cfg.admin_group_id
 
     answer = (menuitem.get('answer') or '')[:MSG_TEXT_LIMIT]
     answer = answer or f'Please write your question about "{menuitem["label"]}"'

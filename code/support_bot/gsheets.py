@@ -106,7 +106,7 @@ async def _gsheets_connect(msg: agtypes.Message) -> None:
     bot = msg.bot
     client = await _get_client(bot)
 
-    gsheets_filename = bot.cfg['save_messages_gsheets_filename']
+    gsheets_filename = bot.cfg.save_messages_gsheets_filename
     await bot.log(f'Saving message to Google Sheet "{gsheets_filename}"')
 
     try:  # open spreadsheet document

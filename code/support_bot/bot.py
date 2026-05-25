@@ -9,9 +9,9 @@ from aiogram.enums import ParseMode
 from google.oauth2.service_account import Credentials
 
 from .buttons import load_toml
-from .const import AdminBtn, SendMode
+from .config import BotConfig
+from .const import AdminBtn
 from .db import SqlDb
-from .utils import parse_bool
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,14 +21,6 @@ class SupportBot(Bot):
     """
     Aiogram Bot Wrapper
     """
-    cfg_vars = (
-        'admin_group_id', 'hello_msg', 'first_reply', 'db_url', 'db_engine',
-        'save_messages_gsheets_cred_file', 'save_messages_gsheets_filename', 'hello_ps',
-        'destruct_user_messages_for_user', 'destruct_bot_messages_for_user',
-        'send_mode', 'mirror_replies', 'mirror_reactions',
-    )
-    botdir_file_cfg_vars = ('save_messages_gsheets_cred_file',)
-
     def __init__(self, name: str, logger: logging.Logger):
         self.name = name
         self._logger = logger
@@ -57,54 +49,23 @@ class SupportBot(Bot):
     def botdir(self) -> Path:
         return BASE_DIR / '..' / 'shared' / self.name
 
-    def _init_config(self) -> dict:
-        return {
-            'name': self.name,
-            'hello_msg': 'Hello! Write your message',
-            'first_reply': (
-                "We have received your message. We'll get back to you as soon as we can. "
-                "Please don't delete the chat so we can send you a reply."
-            ),
-            'db_url': f'sqlite+aiosqlite:///{self.botdir}/db.sqlite',
-            'db_engine': 'aiosqlite',
-            'hello_ps': '\n\n<i>The bot is created by @moladzbel</i>',
-        }
-
-    def _read_config(self) -> tuple[str, dict]:
+    def _read_config(self) -> tuple[str, BotConfig]:
         """
-        Read a bot token and a config with other vars
+        Read the bot token and build the validated per-bot config from the
+        `{NAME}_*` env vars (one per BotConfig field).
         """
-        cfg = self._init_config()
+        data = {'name': self.name}
+        for field in BotConfig.model_fields:
+            if field == 'name':
+                continue
+            if (envvar := os.getenv(f'{self.name}_{field.upper()}')) is not None:
+                data[field] = envvar
 
-        for var in self.cfg_vars:
-            envvar = os.getenv(f'{self.name}_{var.upper()}')
-            if envvar is not None:
-                cfg[var] = envvar
-
-        # convert vars with filenames to actual pathes
-        for var in self.botdir_file_cfg_vars:
-            if var in cfg:
-                cfg[var] = self.botdir / cfg[var]
-
-        # validate and convert destruction vars
-        for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
-            if var in cfg:
-                cfg[var] = int(cfg[var])
-                if not 1 <= cfg[var] <= 47:
-                    raise ValueError(f'{var} must be between 1 and 47 (hours)')
-
-        cfg['send_mode'] = cfg.get('send_mode') or SendMode.REPLY
-        SendMode.validate(cfg['send_mode'], raise_exc=True)
-
-        cfg['mirror_replies'] = parse_bool(cfg.get('mirror_replies'))
-        cfg['mirror_reactions'] = parse_bool(cfg.get('mirror_reactions'))
-        cfg['hello_msg'] += cfg['hello_ps']
-
-        return os.getenv(f'{self.name}_TOKEN'), cfg
+        return os.getenv(f'{self.name}_TOKEN'), BotConfig(**data)
 
     def _configure_db(self) -> None:
-        if self.cfg['db_engine'] == 'aiosqlite':
-            self.db = SqlDb(self.cfg['db_url'])
+        if self.cfg.db_engine == 'aiosqlite':
+            self.db = SqlDb(self.cfg.db_url)
 
     async def log(self, message: str, level=logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')
@@ -116,7 +77,7 @@ class SupportBot(Bot):
         """
         A callback to work with Google Sheets through gspread_asyncio.
         """
-        cred_file = self.cfg.get('save_messages_gsheets_cred_file', None)
+        cred_file = self.cfg.save_messages_gsheets_cred_file
         creds = Credentials.from_service_account_file(cred_file)
         scoped = creds.with_scopes([
             "https://spreadsheets.google.com/feeds",
@@ -128,7 +89,7 @@ class SupportBot(Bot):
     def _load_menu(self) -> None:
         self.menu = load_toml(self.botdir / 'menu.toml')
         if self.menu:
-            self.menu['answer'] = self.cfg['hello_msg']
+            self.menu['answer'] = self.cfg.hello_msg
 
         self.admin_menu = {
             AdminBtn.BROADCAST: {

@@ -106,26 +106,36 @@ async def save_user_message(
         await bot.db.action.add(ActionName.new_user)
 
 
-async def stats_to_admin_chat(bots: list) -> None:
+async def _report_stats(bot) -> None:
     """
-    Report bot stats in admin group
+    Report a single bot's stats in its admin group
     """
+    await bot.log('Reporting stats to admin chat')
     from_date = datetime.date.today() - datetime.timedelta(days=7)
 
+    msg = '<b>In the past week</b>\n'
+    if results := await bot.db.action.get_grouped(from_date):
+        msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
+    else:
+        msg += '- Nothing\n'
+
+    msg += '\n<b>From the beginning</b>\n'
+    if results := await bot.db.action.get_total():
+        msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
+    else:
+        msg += '- Nothing yet\n'
+
+    msg += '\n#stats'
+    await bot.send_message(bot.cfg.admin_group_id, msg)
+
+
+async def stats_to_admin_chat(bots: list) -> None:
+    """
+    Report bot stats in admin group, isolating each bot so one failure
+    doesn't starve the others
+    """
     for bot in bots:
-        await bot.log('Reporting stats to admin chat')
-
-        msg = '<b>In the past week</b>\n'
-        if results := await bot.db.action.get_grouped(from_date):
-            msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
-        else:
-            msg += '- Nothing\n'
-
-        msg += '\n<b>From the beginning</b>\n'
-        if results := await bot.db.action.get_total():
-            msg += '\n'.join([f'- {r[0].value[1]}s: {r[1]}' for r in results]) + '\n'
-        else:
-            msg += '- Nothing yet\n'
-
-        msg += '\n#stats'
-        await bot.send_message(bot.cfg.admin_group_id, msg)
+        try:
+            await _report_stats(bot)
+        except Exception as exc:
+            await bot.log_error(exc)

@@ -7,13 +7,66 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
 
-from .const import AdminBtn
+from .const import AdminBtn, SendMode
 from .informing import handle_error, log
 
 
 class BroadcastForm(StatesGroup):
     message = State()
     confirm = State()
+
+
+# Human-friendly labels for the config fields shown by `bot_settings`, in
+# display order. Secret/technical fields (token, db, gsheets creds) are omitted.
+SETTINGS_LABELS = {
+    'admin_group_id': 'Admin group ID',
+    'hello_msg': 'Welcome message',
+    'first_reply': 'First auto-reply',
+    'destruct_user_messages_for_user': "Auto-delete user's messages after (hours)",
+    'destruct_bot_messages_for_user': "Auto-delete bot's messages after (hours)",
+    'send_mode': 'Reply mode',
+    'mirror_replies': 'Mirror replies',
+    'mirror_reactions': 'Mirror reactions',
+}
+
+# Brief explanation of how each reply mode routes admin messages to the user.
+SEND_MODE_EXPLANATIONS = {
+    SendMode.REPLY: 'only replies to a bot message in a topic are sent to the user',
+    SendMode.ALL: 'any message in a topic is sent to the user',
+    SendMode.ALL_EXCEPT_ADMINS: ('any message in a topic is sent to the user, '
+                                 'except replies to another admin'),
+}
+
+
+def _format_setting_value(field: str, value) -> str:
+    if value is None:
+        return '<i>not set</i>'
+    if isinstance(value, bool):
+        return 'on' if value else 'off'
+    if field == 'send_mode':
+        return SEND_MODE_EXPLANATIONS[value]
+    # admin-configured strings may contain Telegram HTML - render it, don't escape
+    return str(value)
+
+
+@log
+@handle_error
+async def bot_settings(call: agtypes.CallbackQuery) -> None:
+    """
+    Admin action - show the bot's options from .env in a human-readable form,
+    excluding the secret and purely technical ones.
+    """
+    cfg = call.message.bot.cfg
+
+    lines = [f'• <b>{label}:</b> {_format_setting_value(field, getattr(cfg, field))}'
+             for field, label in SETTINGS_LABELS.items()]
+
+    gsheets_on = bool(cfg.save_messages_gsheets_cred_file and cfg.save_messages_gsheets_filename)
+    lines.append(f'• <b>Save messages to Google Sheets:</b> {"on" if gsheets_on else "off"}')
+    if gsheets_on:
+        lines.append(f'• <b>Google Sheets file name:</b> {cfg.save_messages_gsheets_filename}')
+
+    await call.message.answer('\n\n'.join(lines))
 
 
 @log

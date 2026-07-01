@@ -11,7 +11,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .admin_actions import admin_broadcast_start, del_old_topics
+from .admin_actions import admin_broadcast_start, bot_settings, del_old_topics
 from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
 from .utils import save_for_destruction
@@ -62,6 +62,7 @@ class Button:
         self.answer = _extract_answer(content, empty=empty_answer_allowed)
 
     def _recognize_mode(self) -> None:
+        self.mode = ButtonMode.ANSWER  # label-only buttons act on press via their handler
         if 'link' in self.content:
             self.mode = ButtonMode.LINK
         elif 'file' in self.content:
@@ -187,6 +188,8 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
         await del_old_topics(call)
     elif cbd.code == AdminBtn.BROADCAST:
         await admin_broadcast_start(call, kwargs['dispatcher'])
+    elif cbd.code == AdminBtn.SETTINGS:
+        await bot_settings(call)
 
     return await call.answer()
 

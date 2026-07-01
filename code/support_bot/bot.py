@@ -100,4 +100,7 @@ class SupportBot(Bot):
                 'label': '🧹 Delete topics older than 2 weeks',
                 'answer': 'Deleting topics older than 2 weeks...',
             },
+            AdminBtn.SETTINGS: {
+                'label': '⚙️ Show settings',
+            },
         }

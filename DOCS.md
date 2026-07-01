@@ -1,6 +1,7 @@
 ## Available .env options
 
 The following variables are available in `.env` file:
+
 - `BOTS_ENABLED` - names of all the bots you want to run, separated by comma. Example: `YOUTH_BLOC,LEGALIZE`. A name from this list used in below vars in place of `{BOTNAME}`. Do not change the name after the first start of the bot.
 - `{BOTNAME}_TOKEN` - Bot's secret token.
 - `{BOTNAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' permission.

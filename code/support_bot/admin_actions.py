@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher
@@ -38,7 +39,7 @@ SEND_MODE_EXPLANATIONS = {
 }
 
 
-def _format_setting_value(field: str, value) -> str:
+def _format_setting_value(field: str, value: Any) -> str:
     if value is None:
         return '<i>not set</i>'
     if isinstance(value, bool):
@@ -71,7 +72,7 @@ async def bot_settings(call: agtypes.CallbackQuery) -> None:
 
 @log
 @handle_error
-async def del_old_topics(call: agtypes.CallbackQuery):
+async def del_old_topics(call: agtypes.CallbackQuery) -> None:
     """
     Admin action - delete topics older than 2 weeks,
     and delete their thread ids from DB

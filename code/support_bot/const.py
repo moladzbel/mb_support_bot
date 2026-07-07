@@ -13,7 +13,7 @@ class BaseEnum(str, enum.Enum):
         return self.value
 
     @classmethod
-    def validate(cls, value, raise_exc: bool=False) -> bool:
+    def validate(cls, value: str, raise_exc: bool = False) -> bool:
         is_valid = any(value == member.value for member in cls)
         if not is_valid and raise_exc:
             raise ValueError(f'{value} is not one of {", ".join(cls)}')

@@ -3,25 +3,31 @@ Work with Google Sheets
 """
 import string
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiogram.types as agtypes
 import gspread_asyncio
-from gspread_asyncio import AsyncioGspreadWorksheet
+from gspread_asyncio import (
+    AsyncioGspreadClient, AsyncioGspreadSpreadsheet, AsyncioGspreadWorksheet,
+)
 from gspread.exceptions import SpreadsheetNotFound, WorksheetNotFound
 from gspread.utils import ValueInputOption
+from sqlalchemy.engine.row import Row as SaRow
 
 from .const import MsgType
 from .utils import determine_msg_type, make_short_user_info
 
+if TYPE_CHECKING:
+    from .bot import SupportBot
 
-CLIENT = None
-CLIENT_MANAGER = None
+
+CLIENT: AsyncioGspreadClient | None = None
+CLIENT_MANAGER: gspread_asyncio.AsyncioGspreadClientManager | None = None
 COLUMN_NAMES = 'When, UTC', 'Type', 'Who', 'To whom', 'Text', 'Filename', 'Forward', 'Subject'
 LAST_COLUMN_SHEET_LETTER = string.ascii_uppercase[len(COLUMN_NAMES) - 1]
 
 
-async def _get_client(bot):
+async def _get_client(bot: 'SupportBot') -> AsyncioGspreadClient:
     """
     gspread_asyncio docs require to do it this way
     """
@@ -74,7 +80,7 @@ def _msg_to_row_data(msg: agtypes.Message) -> dict:
             'subject': ''}
 
 
-async def _ensure_worksheet(doc):
+async def _ensure_worksheet(doc: AsyncioGspreadSpreadsheet) -> AsyncioGspreadWorksheet:
     """
     Get or reate a worksheet with correct columns
     """
@@ -97,7 +103,8 @@ async def _ensure_worksheet(doc):
     return sheet
 
 
-async def _gsheets_connect(msg: agtypes.Message) -> None:
+async def _gsheets_connect(
+        msg: agtypes.Message) -> tuple[AsyncioGspreadWorksheet, dict, int] | None:
     """
     Prepare everything to insert a row:
     autheticate, ensure spreadsheet, ensure worksheet,
@@ -130,7 +137,7 @@ async def _insert_row(sheet: AsyncioGspreadWorksheet, rd: dict, index: int) -> N
     await sheet.insert_row(row, index=index, value_input_option=ValueInputOption.user_entered)
 
 
-async def gsheets_save_admin_message(msg: agtypes.Message, tguser) -> None:
+async def gsheets_save_admin_message(msg: agtypes.Message, tguser: SaRow) -> None:
     """
     Save a message written by Admin in Google Sheets
     """
@@ -155,7 +162,8 @@ async def gsheets_save_user_message(msg: agtypes.Message, highlight: bool=False)
         await format_cells(sheet, f"A{index}:D{index}", ('bold',))
 
 
-async def format_cells(sheet, ranje: str, modes: tuple[str], switch: bool=True):
+async def format_cells(sheet: AsyncioGspreadWorksheet, ranje: str, modes: tuple[str, ...],
+                       switch: bool = True) -> None:
     """
     Shortcut for basic cell format.
     Modes: bold, italic, underline etc.

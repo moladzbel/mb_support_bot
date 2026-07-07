@@ -6,7 +6,7 @@ import aiogram.types as agtypes
 import sqlalchemy as sa
 from sqlalchemy.engine.row import Row as SaRow
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import false
 
@@ -82,7 +82,7 @@ class DbTgUser:
     username: str
     thread_id: int
     last_user_msg_at: datetime.datetime
-    subject: str = None
+    subject: str | None = None
     banned: bool = False
     first_replied: bool = False  # whether first_reply has been sent or not
 
@@ -104,7 +104,7 @@ class SqlRepo:
     """
     Repository for a table
     """
-    def __init__(self, engine):
+    def __init__(self, engine: AsyncEngine):
         self.engine = engine
 
 
@@ -192,7 +192,7 @@ class SqlAction(SqlRepo):
             except IntegrityError:
                 await conn.execute(update_q)
 
-    async def get_grouped(self, from_date: datetime.date) -> list:
+    async def get_grouped(self, from_date: datetime.date) -> list[SaRow]:
         """
         Statistics over time starting from "from_date"
         """
@@ -205,7 +205,7 @@ class SqlAction(SqlRepo):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def get_total(self) -> list:
+    async def get_total(self) -> list[SaRow]:
         """
         Statistics over entire bot existence time
         """

@@ -1,9 +1,13 @@
+from collections.abc import Awaitable
+from typing import TYPE_CHECKING
+
 import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.enums.chat_type import ChatType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.types import ReactionTypeEmoji, ReplyParameters
+from sqlalchemy.engine.row import Row as SaRow
 
 from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
@@ -14,6 +18,9 @@ from .filters import (
     GroupChatCreatedFilter, InAdminGroup, NewChatMembersFilter, PrivateChatFilter,
 )
 from .utils import make_user_info, save_for_destruction
+
+if TYPE_CHECKING:
+    from .bot import SupportBot
 
 
 @log
@@ -37,7 +44,7 @@ async def cmd_start(msg: agtypes.Message, *args, **kwargs) -> None:
     await save_for_destruction(sentmsg, bot)
 
 
-async def _group_hello(msg: agtypes.Message):
+async def _group_hello(msg: agtypes.Message) -> None:
     """
     Send group hello message to a group
     """
@@ -49,7 +56,8 @@ async def _group_hello(msg: agtypes.Message):
     await msg.bot.send_message(group.id, text)
 
 
-async def _send_into_topic(bot, group_id: int, thread_id: int, coro):
+async def _send_into_topic(bot: 'SupportBot', group_id: int, thread_id: int,
+                           coro: Awaitable[agtypes.Message]) -> agtypes.Message | None:
     """
     Run a send/forward coroutine targeting a topic and confirm Telegram placed
     the result in that topic. If the topic was deleted, Telegram may silently
@@ -98,7 +106,7 @@ async def _send_reply_preface(msg: agtypes.Message, thread_id: int) -> None:
     await _send_into_topic(bot, group_id, thread_id, coro)
 
 
-async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
+async def _new_topic(msg: agtypes.Message, tguser: SaRow | None = None) -> int:
     """
     Create a new topic for the user
     """
@@ -126,7 +134,7 @@ async def _new_topic(msg: agtypes.Message, tguser=None) -> int:
 
 @log
 @handle_error
-async def added_to_group(msg: agtypes.Message, *args, **kwargs):
+async def added_to_group(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Report group ID when added to a group
     """
@@ -138,14 +146,14 @@ async def added_to_group(msg: agtypes.Message, *args, **kwargs):
 
 @log
 @handle_error
-async def group_chat_created(msg: agtypes.Message, *args, **kwargs):
+async def group_chat_created(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Report group ID when a group with the bot is created
     """
     await _group_hello(msg)
 
 
-async def _preface_and_forward(msg: agtypes.Message, thread_id: int):
+async def _preface_and_forward(msg: agtypes.Message, thread_id: int) -> agtypes.Message | None:
     """
     Send the optional reply-context preface, then forward the user's message
     into the topic. Returns the forwarded Message, or None if the topic
@@ -224,7 +232,7 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     await save_for_destruction(copied, bot, chat_id=tguser.user_id)
 
 
-def _mirror_reaction(update: agtypes.MessageReactionUpdated) -> list:
+def _mirror_reaction(update: agtypes.MessageReactionUpdated) -> list[ReactionTypeEmoji]:
     """
     The reaction to mirror to the other side: a single standard emoji, or an
     empty list to clear (when the reaction was removed or is a custom emoji,
@@ -268,7 +276,7 @@ async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwar
 
 @log
 @handle_error
-async def mention_in_admin_group(msg: agtypes.Message, *args, **kwargs):
+async def mention_in_admin_group(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Report group ID when a group with the bot is created
     """

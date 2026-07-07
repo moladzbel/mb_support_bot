@@ -1,12 +1,18 @@
 import datetime
 import html
+from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
+from sqlalchemy.engine.row import Row as SaRow
 
 from .const import MsgType
 
+if TYPE_CHECKING:
+    from .bot import SupportBot
 
-async def make_user_info(user: agtypes.User, bot=None, tguser=None) -> str:
+
+async def make_user_info(user: agtypes.User, bot: 'SupportBot | None' = None,
+                         tguser: SaRow | None = None) -> str:
     """
     Text representation of a user
     """
@@ -33,7 +39,7 @@ async def make_user_info(user: agtypes.User, bot=None, tguser=None) -> str:
     return '\n\n'.join(fields)
 
 
-def make_short_user_info(user: agtypes.User | None=None, tguser=None) -> str:
+def make_short_user_info(user: agtypes.User | None = None, tguser: SaRow | None = None) -> str:
     """
     Short text representation of a user
     """
@@ -48,7 +54,7 @@ def make_short_user_info(user: agtypes.User | None=None, tguser=None) -> str:
     return f'{fullname} ({tech_part})'
 
 
-def determine_msg_type(msg: agtypes.Message) -> str:
+def determine_msg_type(msg: agtypes.Message) -> MsgType:
     """
     Determine a type of the message by inspecting its content
     """
@@ -82,7 +88,7 @@ def determine_msg_type(msg: agtypes.Message) -> str:
         return MsgType.REGULAR_OR_OTHER
 
 
-async def destruct_messages(bots: list) -> None:
+async def destruct_messages(bots: list['SupportBot']) -> None:
     """
     Delete messages for users, if a bot is set up to do so
     """
@@ -111,7 +117,8 @@ async def destruct_messages(bots: list) -> None:
             await bot.log(f'Messages destructed: {destructed}')
 
 
-async def save_for_destruction(msg, bot, chat_id=None):
+async def save_for_destruction(msg: agtypes.Message | None, bot: 'SupportBot',
+                               chat_id: int | None = None) -> None:
     """
     Save msg id to destruct the msg later, if required
     """

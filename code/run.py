@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent
 BOTS = ()
 
 
-def setup_logger(level=logging.INFO, log_path=None) -> logging.Logger:
+def setup_logger(level: int = logging.INFO, log_path: Path | None = None) -> None:
     global logger
     logger = logging.getLogger('support_bot')
     logger.setLevel(level)
@@ -35,14 +35,14 @@ def setup_logger(level=logging.INFO, log_path=None) -> logging.Logger:
         logger.addHandler(file_handler)
 
 
-def init_bots():
+def init_bots() -> None:
     """
     Create Bot instances. Any command works with them,
     so it's shorter to have them as a global
     """
     global BOTS
     if BOTS:
-        return BOTS
+        return
 
     BOTS = []
     for name in os.getenv('BOTS_ENABLED').split(','):
@@ -97,7 +97,7 @@ def cmd_migrate() -> None:
     logger.info('Migrating done')
 
 
-async def start_jobs(bots: list) -> None:
+async def start_jobs(bots: list[SupportBot]) -> None:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(stats_to_admin_chat, 'cron', day_of_week=0, args=(bots,))  # weekly
     scheduler.add_job(destruct_messages, 'interval', minutes=10, args=(bots,))  # every 10 minutes

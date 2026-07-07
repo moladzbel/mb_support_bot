@@ -3,6 +3,7 @@ Display menu with buttons according to menu.toml file,
 handle buttons actions
 """
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
 import toml
@@ -15,6 +16,10 @@ from .admin_actions import admin_broadcast_start, bot_settings, del_old_topics
 from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
 from .utils import save_for_destruction
+
+
+if TYPE_CHECKING:
+    from .bot import SupportBot
 
 
 def load_toml(path: Path) -> dict | None:
@@ -54,7 +59,7 @@ class Button:
     """
     Wrapper over an inline keyboard button
     """
-    def __init__(self, content):
+    def __init__(self, content: dict):
         self.content = content
         self._recognize_mode()
 
@@ -74,7 +79,7 @@ class Button:
         elif 'answer' in self.content:
             self.mode = ButtonMode.ANSWER
 
-    def as_inline(self, callback_data : str | None=None) -> InlineKeyboardButton:
+    def as_inline(self, callback_data: str | None = None) -> InlineKeyboardButton:
         if self.mode in (ButtonMode.FILE, ButtonMode.ANSWER, ButtonMode.MENU, ButtonMode.SUBJECT):
             return InlineKeyboardButton(text=self.content['label'], callback_data=callback_data)
         elif self.mode == ButtonMode.LINK:
@@ -89,7 +94,7 @@ def _extract_answer(menu: dict, empty: bool=False) -> str:
     return answer
 
 
-def _create_button(content):
+def _create_button(content: dict) -> Button | None:
     """
     Button factory
     """
@@ -131,7 +136,7 @@ def _get_kb_builder(menu: dict, msgid: int, path: str='') -> InlineKeyboardBuild
     return builder
 
 
-def _find_menu_item(menu: dict, cbd: CallbackData) -> [dict, str]:
+def _find_menu_item(menu: dict, cbd: CallbackData) -> tuple[dict, str]:
     """
     Find a button info in bot menu tree by callback data.
     """
@@ -194,7 +199,7 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     return await call.answer()
 
 
-async def send_file(bot, chat_id: int, menuitem: dict) -> agtypes.Message:
+async def send_file(bot: 'SupportBot', chat_id: int, menuitem: dict) -> agtypes.Message:
     """
     Shortcut for sending a file on a button press.
     """
@@ -207,7 +212,7 @@ async def send_file(bot, chat_id: int, menuitem: dict) -> agtypes.Message:
     raise FileNotFoundError(fpath.resolve())
 
 
-async def set_subject(bot, user: agtypes.User, menuitem: dict) -> agtypes.Message:
+async def set_subject(bot: 'SupportBot', user: agtypes.Chat, menuitem: dict) -> agtypes.Message:
     """
     Set the chosen subject to the user and report that.
     """
@@ -228,7 +233,7 @@ async def set_subject(bot, user: agtypes.User, menuitem: dict) -> agtypes.Messag
 
 
 async def edit_or_send_new_msg_with_keyboard(
-        bot, chat_id: int, cbd: CallbackData, menu: dict, path: str='') -> agtypes.Message:
+        bot: 'SupportBot', chat_id: int, cbd: CBD, menu: dict, path: str='') -> agtypes.Message:
     """
     Shortcut to edit a message, or,
     if it's not possible, send a new message.
@@ -243,7 +248,8 @@ async def edit_or_send_new_msg_with_keyboard(
 
 
 async def send_new_msg_with_keyboard(
-        bot, chat_id: int, text: str, menu: dict | None, path: str='') -> agtypes.Message:
+        bot: 'SupportBot', chat_id: int, text: str, menu: dict | None,
+        path: str='') -> agtypes.Message:
     """
     Shortcut to send a message with a keyboard.
     """

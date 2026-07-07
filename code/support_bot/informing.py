@@ -3,16 +3,22 @@ A package for system messages:
 technical informing in chats, writing logs
 """
 import datetime
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from sqlalchemy.engine.row import Row as SaRow
 
 from .const import ActionName
 from .gsheets import gsheets_save_admin_message, gsheets_save_user_message
 from .utils import make_short_user_info
 
+if TYPE_CHECKING:
+    from .bot import SupportBot
 
-def log(func):
+
+def log(func: Callable) -> Callable:
     """
     Decorator to log an action
     """
@@ -24,7 +30,7 @@ def log(func):
     return wrapper
 
 
-def handle_error(func):
+def handle_error(func: Callable) -> Callable:
     """
     Decorator to process any exception in a handler
     """
@@ -44,7 +50,7 @@ def handle_error(func):
 
 
 @log
-async def report_user_ban(msg: agtypes.Message, func) -> None:
+async def report_user_ban(msg: agtypes.Message, func: Callable) -> None:
     """
     Report when the user banned the bot
     """
@@ -73,7 +79,7 @@ async def report_cant_create_topic(msg: agtypes.Message) -> None:
     )
 
 
-async def save_admin_message(msg: agtypes.Message, tguser) -> None:
+async def save_admin_message(msg: agtypes.Message, tguser: SaRow) -> None:
     """
     Entrypoint for all the mechanisms of saving messages sent by admin.
     There is only one currently: Google Sheets.
@@ -106,7 +112,7 @@ async def save_user_message(
         await bot.db.action.add(ActionName.new_user)
 
 
-async def _report_stats(bot) -> None:
+async def _report_stats(bot: 'SupportBot') -> None:
     """
     Report a single bot's stats in its admin group
     """
@@ -129,7 +135,7 @@ async def _report_stats(bot) -> None:
     await bot.send_message(bot.cfg.admin_group_id, msg)
 
 
-async def stats_to_admin_chat(bots: list) -> None:
+async def stats_to_admin_chat(bots: list['SupportBot']) -> None:
     """
     Report bot stats in admin group, isolating each bot so one failure
     doesn't starve the others

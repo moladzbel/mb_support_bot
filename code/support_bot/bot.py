@@ -21,6 +21,11 @@ class SupportBot(Bot):
     """
     Aiogram Bot Wrapper
     """
+    cfg: BotConfig
+    db: SqlDb
+    menu: dict | None
+    admin_menu: dict
+
     def __init__(self, name: str, logger: logging.Logger):
         self.name = name
         self._logger = logger
@@ -67,13 +72,13 @@ class SupportBot(Bot):
         if self.cfg.db_engine == 'aiosqlite':
             self.db = SqlDb(self.cfg.db_url)
 
-    async def log(self, message: str, level=logging.INFO) -> None:
+    async def log(self, message: str, level: int = logging.INFO) -> None:
         self._logger.log(level, f'{self.name}: {message}')
 
     async def log_error(self, exception: Exception, traceback: bool = True) -> None:
         self._logger.error(str(exception), exc_info=traceback)
 
-    def get_gsheets_creds(self):
+    def get_gsheets_creds(self) -> Credentials:
         """
         A callback to work with Google Sheets through gspread_asyncio.
         """

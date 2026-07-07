@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -159,12 +160,12 @@ class SqlTgUser(SqlRepo):
             query = sa.update(TgUsers).where(TgUsers.user_id==user_id).values(thread_id=None)
             await conn.execute(query)
 
-    async def get_all(self) -> list[SaRow]:
+    async def get_all(self) -> Sequence[SaRow]:
         async with self.engine.begin() as conn:
             result = await conn.execute(sa.select(TgUsers))
             return result.fetchall()
 
-    async def get_olds(self) -> list[SaRow]:
+    async def get_olds(self) -> Sequence[SaRow]:
         async with self.engine.begin() as conn:
             ago = datetime.datetime.utcnow() - datetime.timedelta(weeks=2)
             query = sa.select(TgUsers).where(TgUsers.last_user_msg_at <= ago)
@@ -192,7 +193,7 @@ class SqlAction(SqlRepo):
             except IntegrityError:
                 await conn.execute(update_q)
 
-    async def get_grouped(self, from_date: datetime.date) -> list[SaRow]:
+    async def get_grouped(self, from_date: datetime.date) -> Sequence[SaRow]:
         """
         Statistics over time starting from "from_date"
         """
@@ -205,7 +206,7 @@ class SqlAction(SqlRepo):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def get_total(self) -> list[SaRow]:
+    async def get_total(self) -> Sequence[SaRow]:
         """
         Statistics over entire bot existence time
         """
@@ -222,7 +223,8 @@ class SqlMessageToDelete(SqlRepo):
     """
     Repository for MessagesToDelete table
     """
-    async def add(self, msg: agtypes.Message, chat_id: int | None = None) -> None:
+    async def add(self, msg: agtypes.Message | agtypes.MessageId,
+                  chat_id: int | None = None) -> None:
         """
         Remember new message
         """
@@ -239,7 +241,7 @@ class SqlMessageToDelete(SqlRepo):
             except IntegrityError:
                 pass  # such message already in the db
 
-    async def get_many(self, before: datetime.datetime, by_bot: bool) -> list[SaRow]:
+    async def get_many(self, before: datetime.datetime, by_bot: bool) -> Sequence[SaRow]:
         """
         Statistics over entire bot existence time
         """
@@ -249,7 +251,7 @@ class SqlMessageToDelete(SqlRepo):
             result = await conn.execute(query)
             return result.fetchall()
 
-    async def remove(self, msgs: list[SaRow]) -> None:
+    async def remove(self, msgs: Sequence[SaRow]) -> None:
         """
         Remove rows with these ids
         """

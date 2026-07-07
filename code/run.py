@@ -14,11 +14,10 @@ from support_bot import SupportBot, destruct_messages, stats_to_admin_chat, regi
 
 BASE_DIR = Path(__file__).resolve().parent
 BOTS = ()
+logger = logging.getLogger('support_bot')
 
 
 def setup_logger(level: int = logging.INFO, log_path: Path | None = None) -> None:
-    global logger
-    logger = logging.getLogger('support_bot')
     logger.setLevel(level)
 
     stream_handler = logging.StreamHandler()

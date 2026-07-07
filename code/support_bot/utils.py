@@ -117,7 +117,7 @@ async def destruct_messages(bots: list['SupportBot']) -> None:
             await bot.log(f'Messages destructed: {destructed}')
 
 
-async def save_for_destruction(msg: agtypes.Message | None, bot: 'SupportBot',
+async def save_for_destruction(msg: agtypes.Message | agtypes.MessageId | None, bot: 'SupportBot',
                                chat_id: int | None = None) -> None:
     """
     Save msg id to destruct the msg later, if required

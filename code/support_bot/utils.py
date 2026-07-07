@@ -135,6 +135,15 @@ async def destruct_messages(bots: list['SupportBot']) -> None:
             await bot.log(f'Messages impossible to delete, dropped from the queue: {undeletable}')
 
 
+async def sweep_user_locks(bots: list['SupportBot']) -> None:
+    """
+    Drop unheld per-user locks of every bot.
+    Async so the scheduler runs it on the event loop rather than in a thread.
+    """
+    for bot in bots:
+        bot.sweep_user_locks()
+
+
 async def save_for_destruction(msg: agtypes.Message | agtypes.MessageId | None, bot: 'SupportBot',
                                chat_id: int | None = None) -> None:
     """

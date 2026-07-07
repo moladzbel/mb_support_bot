@@ -50,6 +50,15 @@ class SupportBot(Bot):
             self._user_locks[user_id] = lock
         return lock
 
+    def sweep_user_locks(self) -> None:
+        """
+        Forget unheld per-user locks so the dict doesn't grow forever.
+        Must be called from the event loop: an unheld lock can't be acquired
+        mid-sweep, because handlers acquire it with no await between
+        the dict lookup and the acquire.
+        """
+        self._user_locks = {uid: lock for uid, lock in self._user_locks.items() if lock.locked()}
+
     @property
     def botdir(self) -> Path:
         return BASE_DIR / '..' / 'shared' / self.name

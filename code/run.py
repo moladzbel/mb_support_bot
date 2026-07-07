@@ -10,7 +10,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from aiogram import Dispatcher
 
-from support_bot import SupportBot, destruct_messages, stats_to_admin_chat, register_handlers
+from support_bot import (
+    SupportBot, destruct_messages, register_handlers, stats_to_admin_chat, sweep_user_locks,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -102,6 +104,7 @@ async def start_jobs(bots: list[SupportBot]) -> None:
     scheduler.add_job(stats_to_admin_chat, 'cron', day_of_week=0, args=(bots,))  # weekly
     scheduler.add_job(destruct_messages, 'interval', minutes=10, args=(bots,),
                       next_run_time=datetime.now())  # on startup, then every 10 minutes
+    scheduler.add_job(sweep_user_locks, 'interval', hours=1, args=(bots,))
     scheduler.start()
 
 

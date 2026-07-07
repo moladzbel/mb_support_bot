@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import asyncio
@@ -99,7 +100,8 @@ def cmd_migrate() -> None:
 async def start_jobs(bots: list[SupportBot]) -> None:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(stats_to_admin_chat, 'cron', day_of_week=0, args=(bots,))  # weekly
-    scheduler.add_job(destruct_messages, 'interval', minutes=10, args=(bots,))  # every 10 minutes
+    scheduler.add_job(destruct_messages, 'interval', minutes=10, args=(bots,),
+                      next_run_time=datetime.now())  # on startup, then every 10 minutes
     scheduler.start()
 
 

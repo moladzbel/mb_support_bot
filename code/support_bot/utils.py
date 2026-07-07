@@ -3,6 +3,7 @@ import html
 from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
+from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy.engine.row import Row as SaRow
 
 from .const import MsgType
@@ -90,31 +91,48 @@ def determine_msg_type(msg: agtypes.Message) -> MsgType:
 
 async def destruct_messages(bots: list['SupportBot']) -> None:
     """
-    Delete messages for users, if a bot is set up to do so
+    Delete messages for users, if a bot is set up to do so.
+    A message leaves the queue when it's deleted, when Telegram rejects
+    the deletion as impossible (too old, already deleted), or when it's
+    past Telegram's 48-hour deletion window anyway. A message which failed
+    for any other reason stays queued and is retried on the next run.
     """
     for bot in bots:
         destructed = 0
+        undeletable = 0
 
         for var in 'destruct_user_messages_for_user', 'destruct_bot_messages_for_user':
             if val := getattr(bot.cfg, var):
                 error_reported = False
                 by_bot = var == 'destruct_bot_messages_for_user'
-                before = datetime.datetime.utcnow() - datetime.timedelta(hours=val)
+                now = datetime.datetime.utcnow()
+                before = now - datetime.timedelta(hours=val)
+                deadline = now - datetime.timedelta(hours=48)
                 msgs = await bot.db.msgtodel.get_many(before, by_bot)
 
+                to_remove = []
                 for msg in msgs:
                     try:
                         await bot.delete_message(msg.chat_id, msg.msg_id)
                         destructed += 1
+                        to_remove.append(msg)
+                    except TelegramBadRequest:
+                        undeletable += 1
+                        to_remove.append(msg)
                     except Exception as exc:
+                        if msg.sent_at <= deadline:
+                            undeletable += 1
+                            to_remove.append(msg)
                         if not error_reported:
                             await bot.log_error(exc)
                         error_reported = True
 
-                await bot.db.msgtodel.remove(msgs)
+                await bot.db.msgtodel.remove(to_remove)
 
         if destructed:
             await bot.log(f'Messages destructed: {destructed}')
+        if undeletable:
+            await bot.log(f'Messages impossible to delete, dropped from the queue: {undeletable}')
 
 
 async def save_for_destruction(msg: agtypes.Message | agtypes.MessageId | None, bot: 'SupportBot',

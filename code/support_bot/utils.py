@@ -38,7 +38,7 @@ async def make_user_info(user: agtypes.User, bot: 'SupportBot | None' = None,
     fields = [name, username, userid]
 
     if lang := getattr(user, 'language_code', None):
-        fields.append(f'Language code: {lang}')
+        fields.append(f'Language code: {html.escape(lang)}')
     if premium := getattr(user, 'is_premium', None):
         fields.append(f'Premium: {premium}')
 

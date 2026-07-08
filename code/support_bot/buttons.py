@@ -15,7 +15,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from .admin_actions import admin_broadcast_start, bot_settings, del_old_topics
 from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
-from .utils import save_for_destruction
+from .utils import may_use_admin_actions, save_for_destruction
 
 
 if TYPE_CHECKING:
@@ -187,6 +187,9 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
     """
     A callback for any button shown in admin group.
     """
+    if not await may_use_admin_actions(call.message.bot, call.from_user):
+        return await call.answer('Only group admins can do this', show_alert=True)
+
     cbd = CBD.unpack(call.data)
 
     if cbd.code == AdminBtn.DEL_OLD_TOPICS:

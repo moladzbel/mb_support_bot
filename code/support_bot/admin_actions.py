@@ -10,6 +10,7 @@ from aiogram.fsm.storage.base import StorageKey
 
 from .const import AdminBtn, SendMode
 from .informing import handle_error, log
+from .utils import may_use_admin_actions
 
 
 class BroadcastForm(StatesGroup):
@@ -28,6 +29,7 @@ SETTINGS_LABELS = {
     'send_mode': 'Reply mode',
     'mirror_replies': 'Mirror replies',
     'mirror_reactions': 'Mirror reactions',
+    'admin_only_actions': 'Admin actions for group admins only',
 }
 
 # Brief explanation of how each reply mode routes admin messages to the user.
@@ -147,6 +149,9 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
 
     msg = call.message
     bot = msg.bot
+
+    if not await may_use_admin_actions(bot, call.from_user):
+        return await call.answer('Only group admins can do this', show_alert=True)
     cbd = CBD.unpack(call.data)
     state_data = await state.get_data()
 

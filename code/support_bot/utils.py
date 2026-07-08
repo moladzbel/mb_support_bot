@@ -3,13 +3,28 @@ import html
 from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
+from aiogram.enums import ChatMemberStatus
 from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy.engine.row import Row as SaRow
 
-from .const import MsgType
+from .const import ANONYMOUS_ADMIN_ID, MsgType
 
 if TYPE_CHECKING:
     from .bot import SupportBot
+
+
+async def may_use_admin_actions(bot: 'SupportBot', user: agtypes.User) -> bool:
+    """
+    Check the user is allowed to use admin actions: anyone in the admin group
+    when admin_only_actions is off, otherwise only the group's admins and owner.
+    Anonymous admins act as @GroupAnonymousBot, which only admins can do.
+    """
+    if not bot.cfg.admin_only_actions:
+        return True
+    if user.id == ANONYMOUS_ADMIN_ID:
+        return True
+    member = await bot.get_chat_member(bot.cfg.admin_group_id, user.id)
+    return member.status in (ChatMemberStatus.CREATOR, ChatMemberStatus.ADMINISTRATOR)
 
 
 async def make_user_info(user: agtypes.User, bot: 'SupportBot | None' = None,

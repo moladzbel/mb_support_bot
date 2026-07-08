@@ -35,6 +35,7 @@ class BotConfig(BaseModel):
     send_mode: SendMode = SendMode.REPLY
     mirror_replies: bool = False
     mirror_reactions: bool = False
+    admin_only_actions: bool = True
 
     @field_validator('send_mode', mode='before')
     @classmethod

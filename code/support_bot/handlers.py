@@ -17,7 +17,7 @@ from .filters import (
     ACommandFilter, AdminMessageForUser, BtnInAdminGroup, BtnInPrivateChat, BotMention,
     GroupChatCreatedFilter, InAdminGroup, NewChatMembersFilter, PrivateChatFilter,
 )
-from .utils import make_user_info, save_for_destruction
+from .utils import make_user_info, may_use_admin_actions, save_for_destruction
 
 if TYPE_CHECKING:
     from .bot import SupportBot
@@ -278,9 +278,13 @@ async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwar
 @handle_error
 async def mention_in_admin_group(msg: agtypes.Message, *args, **kwargs) -> None:
     """
-    Report group ID when a group with the bot is created
+    Show the admin menu on the bot's mention
     """
     bot, group = msg.bot, msg.chat
+
+    if not await may_use_admin_actions(bot, msg.from_user):
+        await msg.reply('Only group admins can do this')
+        return
 
     await send_new_msg_with_keyboard(bot, group.id, 'Choose:', bot.admin_menu)
 

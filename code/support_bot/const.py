@@ -3,6 +3,9 @@ import enum
 
 MSG_TEXT_LIMIT = 4096
 
+# Fixed service account Telegram substitutes as the sender for anonymous group admins
+ANONYMOUS_ADMIN_ID = 1087968824
+
 
 class BaseEnum(str, enum.Enum):
     """

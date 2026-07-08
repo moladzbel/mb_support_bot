@@ -232,6 +232,64 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     await save_for_destruction(copied, bot, chat_id=tguser.user_id)
 
 
+@log
+@handle_error
+async def user_edited_message(msg: agtypes.Message, *args, **kwargs) -> None:
+    """
+    When a user edits a message, its counterpart in the admin topic is a
+    forward, which Telegram forbids editing. So mark the original forward
+    with a reply, then copy the edited version into the topic.
+    """
+    bot, user, db = msg.bot, msg.chat, msg.bot.db
+
+    mapping = await db.msgmap.get_by_user_msg(user.id, msg.message_id)
+    if not mapping:
+        return
+    tguser = await db.tguser.get(user=user)
+    if not (tguser and tguser.thread_id):
+        return
+
+    group_id, thread_id = bot.cfg.admin_group_id, tguser.thread_id
+    coro = bot.send_message(
+        group_id,
+        '✏️ Edited to:',
+        message_thread_id=thread_id,
+        reply_parameters=ReplyParameters(message_id=mapping.admin_msg_id,
+                                         allow_sending_without_reply=True),
+    )
+    if await _send_into_topic(bot, group_id, thread_id, coro):
+        await msg.copy_to(group_id, message_thread_id=thread_id)
+
+
+@log
+@handle_error
+async def admin_edited_message(msg: agtypes.Message, *args, **kwargs) -> None:
+    """
+    When an admin edits a relayed message, edit its copy on the user side.
+    The copy is a bot message, so text and captions can be edited in place;
+    media replacement is not mirrored.
+    """
+    bot, db = msg.bot, msg.bot.db
+
+    mapping = await db.msgmap.get(msg.message_id)
+    if not mapping:
+        return
+
+    try:
+        if msg.text:
+            await bot.edit_message_text(msg.html_text, chat_id=mapping.user_id,
+                                        message_id=mapping.user_msg_id)
+        elif msg.caption:
+            await bot.edit_message_caption(chat_id=mapping.user_id,
+                                           message_id=mapping.user_msg_id,
+                                           caption=msg.html_text)
+    except TelegramBadRequest as exc:
+        if "can't be edited" in exc.message.lower():
+            await msg.reply('⚠️ After 48 hours, edits cannot be delivered to the user')
+        elif 'not modified' not in exc.message.lower():
+            raise
+
+
 def _mirror_reaction(update: agtypes.MessageReactionUpdated) -> list[ReactionTypeEmoji]:
     """
     The reaction to mirror to the other side: a single standard emoji, or an
@@ -296,6 +354,9 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
     dp.message.register(admin_message, ~ACommandFilter(), AdminMessageForUser())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
+
+    dp.edited_message.register(user_edited_message, PrivateChatFilter(), ~ACommandFilter())
+    dp.edited_message.register(admin_edited_message, ~ACommandFilter(), AdminMessageForUser())
 
     dp.message.register(added_to_group, NewChatMembersFilter())
     dp.message.register(group_chat_created, GroupChatCreatedFilter())

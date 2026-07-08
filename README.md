@@ -11,6 +11,7 @@ Features:
 - Admins can broadcast a message to all the users directly from the admin group
 - Optional archiving of all the messages to a Google Sheet
 - Reporting of bot statistics once a week in the admin group
+- Message editing mirroring
 - Optional replies and reactions mirroring
 - Configurable welcome message and first auto-reply
 - And more

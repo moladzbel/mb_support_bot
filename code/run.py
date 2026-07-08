@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -80,9 +81,8 @@ def cmd_makemigrations() -> None:
         if 'sql' in bot.cfg.db_engine.lower():
             db_url = bot.cfg.db_url
 
-    envvar = f'MBSB_SQLALCHEMY_URL="{db_url}"'
-    stream = os.popen(f'{envvar} alembic revision --autogenerate -m "{message}"')
-    stream.read()
+    subprocess.run([sys.executable, '-m', 'alembic', 'revision', '--autogenerate', '-m', message],
+                   env={**os.environ, 'MBSB_SQLALCHEMY_URL': db_url}, cwd=BASE_DIR)
 
 
 def cmd_migrate() -> None:
@@ -92,9 +92,8 @@ def cmd_migrate() -> None:
     for bot in BOTS:
         if 'sql' in bot.cfg.db_engine.lower():
             logger.info('Migrating DB for %s', bot.name)
-            envvar = 'MBSB_SQLALCHEMY_URL=' + bot.cfg.db_url
-            stream = os.popen(f'{envvar} alembic upgrade head')
-            stream.read()
+            subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'],
+                           env={**os.environ, 'MBSB_SQLALCHEMY_URL': bot.cfg.db_url}, cwd=BASE_DIR)
 
     logger.info('Migrating done')
 

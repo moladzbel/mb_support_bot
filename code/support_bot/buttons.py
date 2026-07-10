@@ -12,7 +12,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .admin_actions import admin_broadcast_start, bot_settings, del_old_topics
+from .admin_actions import admin_broadcast_start, bot_settings, del_old_topics, toggle_ban
 from .const import MSG_TEXT_LIMIT, AdminBtn, ButtonMode, MenuMode
 from .informing import handle_error, log
 from .utils import may_use_admin_actions, save_for_destruction
@@ -198,6 +198,8 @@ async def admin_btn_handler(call: agtypes.CallbackQuery, *args, **kwargs):
         await admin_broadcast_start(call, kwargs['dispatcher'])
     elif cbd.code == AdminBtn.SETTINGS:
         await bot_settings(call)
+    elif cbd.code in (AdminBtn.BAN, AdminBtn.UNBAN):
+        await toggle_ban(call, cbd)
 
     return await call.answer()
 
@@ -252,16 +254,27 @@ async def edit_or_send_new_msg_with_keyboard(
 
 async def send_new_msg_with_keyboard(
         bot: 'SupportBot', chat_id: int, text: str, menu: dict | None,
-        path: str='') -> agtypes.Message:
+        path: str='', thread_id: int | None = None) -> agtypes.Message:
     """
     Shortcut to send a message with a keyboard.
     """
-    sentmsg = await bot.send_message(chat_id, text=text, disable_web_page_preview=True)
+    sentmsg = await bot.send_message(chat_id, text=text, disable_web_page_preview=True,
+                                     message_thread_id=thread_id)
     if menu:
         markup = _get_kb_builder(menu, sentmsg.message_id, path).as_markup()
         await bot.edit_message_text(chat_id=chat_id, message_id=sentmsg.message_id, text=text,
                                     reply_markup=markup)
     return sentmsg
+
+
+def build_ban_menu(banned: bool) -> dict:
+    """
+    Shortcut to build a keyboard with a Ban or Unban button,
+    according to the current banned state
+    """
+    if banned:
+        return {AdminBtn.UNBAN.value: {'label': '♻️ Unban user'}}
+    return {AdminBtn.BAN.value: {'label': '🚫 Ban user'}}
 
 
 def build_cancel_menu() -> dict:

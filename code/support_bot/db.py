@@ -130,9 +130,12 @@ class SqlTgUser(SqlRepo):
 
     async def get(self,
                   user: agtypes.User | None = None,
-                  thread_id: int | None = None) -> SaRow | None:
+                  thread_id: int | None = None,
+                  user_id: int | None = None) -> SaRow | None:
         if user:
-            query = sa.select(TgUsers).where(TgUsers.user_id==user.id)
+            user_id = user.id
+        if user_id:
+            query = sa.select(TgUsers).where(TgUsers.user_id==user_id)
         else:
             query = sa.select(TgUsers).where(TgUsers.thread_id==thread_id)
 

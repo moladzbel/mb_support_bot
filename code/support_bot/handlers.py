@@ -2,7 +2,7 @@ from collections.abc import Awaitable
 from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
-from aiogram import Dispatcher
+from aiogram import Dispatcher, F
 from aiogram.enums.chat_type import ChatType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -12,7 +12,9 @@ from sqlalchemy.engine.row import Row as SaRow
 from .admin_actions import (
     BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_cancel, admin_broadcast_finish,
 )
-from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
+from .buttons import (
+    CBD, admin_btn_handler, build_ban_menu, send_new_msg_with_keyboard, user_btn_handler,
+)
 from .informing import handle_error, log, save_admin_message, save_user_message
 from .const import SendMode
 from .filters import (
@@ -130,7 +132,14 @@ async def _new_topic(msg: agtypes.Message, tguser: SaRow | None = None) -> int:
         text += ('\n\n<i>Only <b>replies</b> to a bot message '
                  'in this topic will be sent to the user.</i>')
 
-    await bot.send_message(group_id, text, message_thread_id=thread_id)
+    banned = bool(tguser and tguser.banned)
+    sentmsg = await send_new_msg_with_keyboard(bot, group_id, text, build_ban_menu(banned),
+                                               thread_id=thread_id)
+    try:
+        await bot.pin_chat_message(group_id, sentmsg.message_id, disable_notification=True)
+    except TelegramBadRequest as exc:  # no "Pin messages" right must not break topic creation
+        await bot.log_error(exc, traceback=False)
+
     return thread_id
 
 
@@ -180,6 +189,8 @@ async def user_message(msg: agtypes.Message, *args, **kwargs) -> None:
 
     async with bot.user_lock(user.id):
         tguser = await db.tguser.get(user=user)
+        if tguser and tguser.banned:
+            return
         thread_id = tguser.thread_id if tguser else None
 
         forwarded = None
@@ -218,7 +229,7 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
     bot, db = msg.bot, msg.bot.db
 
     tguser = await db.tguser.get(thread_id=msg.message_thread_id)
-    if tguser is None:
+    if tguser is None or tguser.banned:
         return
 
     reply_params = None
@@ -248,7 +259,7 @@ async def user_edited_message(msg: agtypes.Message, *args, **kwargs) -> None:
     if not mapping:
         return
     tguser = await db.tguser.get(user=user)
-    if not (tguser and tguser.thread_id):
+    if not (tguser and tguser.thread_id) or tguser.banned:
         return
 
     group_id, thread_id = bot.cfg.admin_group_id, tguser.thread_id
@@ -275,6 +286,9 @@ async def admin_edited_message(msg: agtypes.Message, *args, **kwargs) -> None:
 
     mapping = await db.msgmap.get(msg.message_id)
     if not mapping:
+        return
+    tguser = await db.tguser.get(user_id=mapping.user_id)
+    if tguser and tguser.banned:
         return
 
     try:
@@ -325,6 +339,10 @@ async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwar
             return
         mapping = await db.msgmap.get(update.message_id)
         target = (mapping.user_id, mapping.user_msg_id) if mapping else None
+        if mapping:
+            tguser = await db.tguser.get(user_id=mapping.user_id)
+            if tguser and tguser.banned:
+                return
     else:
         return
 
@@ -365,7 +383,8 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(mention_in_admin_group, BotMention(), InAdminGroup())
 
     dp.message.register(admin_broadcast_ask_confirm, BroadcastForm.message)
-    dp.callback_query.register(admin_broadcast_cancel, BroadcastForm.message, BtnInAdminGroup())
+    dp.callback_query.register(admin_broadcast_cancel, BroadcastForm.message, BtnInAdminGroup(),
+                               CBD.filter(F.code == 'cancel'))
     dp.callback_query.register(admin_broadcast_finish, BroadcastForm.confirm, BtnInAdminGroup())
 
     dp.callback_query.register(user_btn_handler, BtnInPrivateChat())

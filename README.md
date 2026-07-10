@@ -14,6 +14,7 @@ Features:
 - Message editing mirroring
 - Optional replies and reactions mirroring
 - Configurable welcome message and first auto-reply
+- Banning users
 - And more
 
 ![Alt text](media/menu_screenshot.png?raw=true "Menu screenshot")
@@ -29,7 +30,7 @@ Features:
 1. Place bot token to `{BOTNAME}_TOKEN` var in `.env`, e.g. `MYBOT_TOKEN=1312:qwerty`
 1. Restart the container: `docker compose up -d`
 1. Create a new group, enable Topics in the group settings
-1. Add your bot to the group, make it admin with "Manage topics" permission
+1. Add your bot to the group, make it admin with "Manage topics" and "Pin messages" permissions
 1. Copy group ID reported by the bot to `{BOTNAME}_ADMIN_GROUP_ID` var in `.env`. Ensure it starts with `-100`. If it's not, add -100 manually. Example: `MYBOT_ADMIN_GROUP_ID=-1001337`
 1. Restart the container: `docker compose down; docker compose up -d`, wait 10 seconds until it fully started
 1. Finally, write to the bot to ensure it works

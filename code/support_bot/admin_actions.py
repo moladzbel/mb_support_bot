@@ -4,6 +4,7 @@ from typing import Any
 import aiogram.types as agtypes
 from aiogram import Dispatcher
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
+from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.base import StorageKey
@@ -101,6 +102,33 @@ async def del_old_topics(call: agtypes.CallbackQuery) -> None:
 
 @log
 @handle_error
+async def toggle_ban(call: agtypes.CallbackQuery, cbd: CallbackData) -> None:
+    """
+    Admin action - ban or unban the user of the current topic,
+    and swap the button to the opposite action
+    """
+    from .buttons import _get_kb_builder, build_ban_menu
+
+    msg = call.message
+    bot, db = msg.bot, msg.bot.db
+
+    tguser = await db.tguser.get(thread_id=msg.message_thread_id)
+    if not tguser:
+        return await call.answer('User not found', show_alert=True)
+
+    banned = cbd.code == AdminBtn.BAN
+    await db.tguser.update(tguser.user_id, banned=banned)
+
+    markup = _get_kb_builder(build_ban_menu(banned), cbd.msgid).as_markup()
+    await bot.edit_message_reply_markup(chat_id=msg.chat.id, message_id=cbd.msgid,
+                                        reply_markup=markup)
+
+    text = 'User banned 🚫' if banned else 'User unbanned ♻️'
+    await bot.send_message(msg.chat.id, text, message_thread_id=msg.message_thread_id)
+
+
+@log
+@handle_error
 async def admin_broadcast_start(call: agtypes.CallbackQuery, dispatcher: Dispatcher) -> None:
     """
     Start broadcasting flow - ask for a message to broadcast
@@ -179,7 +207,7 @@ async def admin_broadcast_finish(call: agtypes.CallbackQuery, state: FSMContext,
 
         success_count = 0
         forbidden_count = 0
-        users = await bot.db.tguser.get_all()
+        users = [user for user in await bot.db.tguser.get_all() if not user.banned]
         for i, user in enumerate(users):
             while True:
                 try:

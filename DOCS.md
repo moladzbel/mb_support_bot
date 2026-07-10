@@ -4,7 +4,7 @@ The following variables are available in `.env` file:
 
 - `BOTS_ENABLED` - names of all the bots you want to run, separated by comma. Example: `YOUTH_BLOC,LEGALIZE`. A name from this list used in below vars in place of `{BOTNAME}`. Do not change the name after the first start of the bot.
 - `{BOTNAME}_TOKEN` - Bot's secret token.
-- `{BOTNAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' permission.
+- `{BOTNAME}_ADMIN_GROUP_ID` - ID of a Telegram group, where the bot should forward messages from users. Example: `-1002014482535`. The group must have the "Topics" enabled, and the bot has to be an admin with 'Manage topics' and 'Pin messages' permissions.
 - `{BOTNAME}_HELLO_MSG` - Optional. A welcome message to a new user. This and other messages (`{BOTNAME}_HELLO_PS`, `{BOTNAME}_FIRST_REPLY`) can use all the HTML tags supported by Telegram for styling: see *Styling messages* section below.
 - `{BOTNAME}_HELLO_PS` - Optional. A P.S. in hello message. Default is "The bot is created by @moladzbel".
 - `{BOTNAME}_FIRST_REPLY` - Optional. Text of an automatic reply to the first meaningful user mesasge (not the /start) sent to the bot.
@@ -48,7 +48,7 @@ To setup a user menu for your bot, create a file `shared/{BOTNAME}/menu.toml`. S
 1. Place bot token to `{BOTNAME}_TOKEN` var in `.env`
 1. Create a new group, enable Topics in the group settings
 1. Restart the container: `docker compose down; docker compose up -d`
-1. Add your bot to the group, make it admin with "Manage topics" permission
+1. Add your bot to the group, make it admin with "Manage topics" and "Pin messages" permissions
 1. Copy chat ID reported by the bot to `{BOTNAME}_ADMIN_GROUP_ID` var in `.env`
 1. Restart the container again
 

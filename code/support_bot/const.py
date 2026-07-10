@@ -44,6 +44,8 @@ class AdminBtn(BaseEnum):
     DEL_OLD_TOPICS = 'del_old_topics'
     BROADCAST = 'broadcast'
     SETTINGS = 'settings'
+    BAN = 'ban'
+    UNBAN = 'unban'
 
 
 class ButtonMode(BaseEnum):

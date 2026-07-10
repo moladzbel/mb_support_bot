@@ -105,6 +105,8 @@ async def admin_broadcast_start(call: agtypes.CallbackQuery, dispatcher: Dispatc
     """
     Start broadcasting flow - ask for a message to broadcast
     """
+    from .buttons import build_cancel_menu, send_new_msg_with_keyboard
+
     msg = call.message
     bot = msg.bot
 
@@ -112,7 +114,23 @@ async def admin_broadcast_start(call: agtypes.CallbackQuery, dispatcher: Dispatc
     state = FSMContext(dispatcher.storage, key)
 
     await state.set_state(BroadcastForm.message)
-    await msg.answer(bot.admin_menu[AdminBtn.BROADCAST]['answer'])
+    await send_new_msg_with_keyboard(bot, msg.chat.id, bot.admin_menu[AdminBtn.BROADCAST]['answer'],
+                                     build_cancel_menu())
+
+
+@log
+@handle_error
+async def admin_broadcast_cancel(call: agtypes.CallbackQuery, state: FSMContext,
+                                 *args, **kwargs) -> None:
+    """
+    Cancel the broadcasting flow on the Cancel button press
+    """
+    msg = call.message
+
+    await state.clear()
+    await msg.bot.edit_message_text(chat_id=msg.chat.id, message_id=msg.message_id,
+                                    text='Broadcasting canceled')
+    return await call.answer()
 
 
 @log

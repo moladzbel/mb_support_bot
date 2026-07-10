@@ -9,7 +9,9 @@ from aiogram.filters import Command
 from aiogram.types import ReactionTypeEmoji, ReplyParameters
 from sqlalchemy.engine.row import Row as SaRow
 
-from .admin_actions import BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_finish
+from .admin_actions import (
+    BroadcastForm, admin_broadcast_ask_confirm, admin_broadcast_cancel, admin_broadcast_finish,
+)
 from .buttons import admin_btn_handler, send_new_msg_with_keyboard, user_btn_handler
 from .informing import handle_error, log, save_admin_message, save_user_message
 from .const import SendMode
@@ -363,6 +365,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(mention_in_admin_group, BotMention(), InAdminGroup())
 
     dp.message.register(admin_broadcast_ask_confirm, BroadcastForm.message)
+    dp.callback_query.register(admin_broadcast_cancel, BroadcastForm.message, BtnInAdminGroup())
     dp.callback_query.register(admin_broadcast_finish, BroadcastForm.confirm, BtnInAdminGroup())
 
     dp.callback_query.register(user_btn_handler, BtnInPrivateChat())

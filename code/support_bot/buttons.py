@@ -264,6 +264,13 @@ async def send_new_msg_with_keyboard(
     return sentmsg
 
 
+def build_cancel_menu() -> dict:
+    """
+    Shortcut to build a keyboard with a single Cancel button
+    """
+    return {'cancel': {'label': '🚫 Cancel'}}
+
+
 def build_confirm_menu(yes_answer: str='Confirmed', no_answer: str='Canceled') -> dict:
     """
     Shortcut to build typical confirmation keyboard

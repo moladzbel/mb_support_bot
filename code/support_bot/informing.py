@@ -37,9 +37,11 @@ def handle_error(func: Callable) -> Callable:
     async def wrapper(msg: agtypes.Message, *args, **kwargs):
         try:
             return await func(msg, *args, **kwargs)
-        except TelegramForbiddenError:
+        except TelegramForbiddenError as exc:
+            await msg.bot.log_error(exc, traceback=False)
             await report_user_ban(msg, func)
         except TelegramBadRequest as exc:
+            await msg.bot.log_error(exc, traceback=False)
             if 'not enough rights to create a topic' in exc.message:
                 await report_cant_create_topic(msg)
         except Exception as exc:

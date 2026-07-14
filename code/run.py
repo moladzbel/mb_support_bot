@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import asyncio
@@ -30,12 +31,20 @@ def setup_logger(level: int = logging.INFO, log_path: Path | None = None) -> Non
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
+    handlers = [stream_handler]
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(log_path)
+        file_handler = TimedRotatingFileHandler(log_path, when='midnight', backupCount=7)
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+        handlers.append(file_handler)
+
+    # Catch errors escaping the handle_error wrappers, without aiogram's INFO chatter
+    aiogram_logger = logging.getLogger('aiogram')
+    aiogram_logger.setLevel(logging.WARNING)
+    for handler in handlers:
+        aiogram_logger.addHandler(handler)
 
 
 def init_bots() -> None:

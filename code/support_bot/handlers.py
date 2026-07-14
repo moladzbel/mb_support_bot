@@ -19,7 +19,8 @@ from .informing import handle_error, log, save_admin_message, save_user_message
 from .const import SendMode
 from .filters import (
     ACommandFilter, AdminMessageForUser, BtnInAdminGroup, BtnInPrivateChat, BotMention,
-    GroupChatCreatedFilter, InAdminGroup, NewChatMembersFilter, PrivateChatFilter,
+    GroupChatCreatedFilter, InAdminGroup, InAdminGroupTopic, NewChatMembersFilter,
+    PrivateChatFilter,
 )
 from .utils import make_user_info, may_use_admin_actions, save_for_destruction
 
@@ -247,6 +248,38 @@ async def admin_message(msg: agtypes.Message, *args, **kwargs) -> None:
 
 @log
 @handle_error
+async def cmd_del(msg: agtypes.Message, *args, **kwargs) -> None:
+    """
+    Admin replies /del to a relayed message in a user topic —
+    delete its copy on the user side
+    """
+    bot, db = msg.bot, msg.bot.db
+
+    replied = msg.reply_to_message
+    if not replied:
+        await msg.reply('Reply to a message with /del to delete it for the user')
+        return
+    if replied.forward_origin:
+        await msg.reply("⚠️ This is the user's own message, the bot cannot delete it")
+        return
+
+    mapping = await db.msgmap.get(replied.message_id)
+    if not mapping:
+        await msg.reply('⚠️ No linked message on the user side')
+        return
+
+    try:
+        await bot.delete_message(mapping.user_id, mapping.user_msg_id)
+    except TelegramBadRequest as exc:
+        if "can't be deleted" in exc.message.lower():
+            await msg.reply('⚠️ After 48 hours, deletions cannot be delivered to the user')
+            return
+        raise
+    await msg.reply('🗑 Deleted for the user')
+
+
+@log
+@handle_error
 async def user_edited_message(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     When a user edits a message, its counterpart in the admin topic is a
@@ -374,6 +407,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message.register(user_message, PrivateChatFilter(), ~ACommandFilter())
     dp.message.register(admin_message, ~ACommandFilter(), AdminMessageForUser())
     dp.message.register(cmd_start, PrivateChatFilter(), Command('start'))
+    dp.message.register(cmd_del, Command('del'), InAdminGroupTopic())
 
     dp.edited_message.register(user_edited_message, PrivateChatFilter(), ~ACommandFilter())
     dp.edited_message.register(admin_edited_message, ~ACommandFilter(), AdminMessageForUser())

@@ -39,6 +39,10 @@ To setup a user menu for your bot, create a file `shared/{BOTNAME}/menu.toml`. S
 - menu: open a submenu
 - subject: allows users to choose subject they are willing to discuss. Useful for statistics.
 
+## Deleting a delivered message
+
+If an admin sent something wrong to a user, reply to that message with `/del` in the user's topic — the bot deletes its copy on the user's side and confirms with a reply in the topic. Limitations imposed by Telegram: only messages authored by admins can be deleted (the bot cannot delete the user's own messages), and only within 48 hours after sending.
+
 ## How To
 
 ### ... add a new bot to the already running instance

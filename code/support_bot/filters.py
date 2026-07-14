@@ -74,6 +74,15 @@ class InAdminGroup(Filter):
         return is_admin_group and not msg.message_thread_id
 
 
+class InAdminGroupTopic(Filter):
+    """
+    Checks that a message posted in the admin group,
+    inside a user topic (message_thread_id is set)
+    """
+    async def __call__(self, msg: agtypes.Message) -> bool:
+        return msg.chat.id == msg.bot.cfg.admin_group_id and bool(msg.message_thread_id)
+
+
 class BotMention(Filter):
     """
     Checks it is a bot's mention, only

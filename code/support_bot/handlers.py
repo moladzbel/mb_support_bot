@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 import aiogram.types as agtypes
 from aiogram import Dispatcher, F
+from aiogram.enums.chat_member_status import ChatMemberStatus
 from aiogram.enums.chat_type import ChatType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -387,6 +388,27 @@ async def reaction_changed(update: agtypes.MessageReactionUpdated, *args, **kwar
 
 @log
 @handle_error
+async def user_blocked_or_unblocked(update: agtypes.ChatMemberUpdated, *args, **kwargs) -> None:
+    """
+    Report to the admin topic when the user blocks or unblocks the bot
+    """
+    bot = update.bot
+    old, new = update.old_chat_member.status, update.new_chat_member.status
+
+    if new == ChatMemberStatus.KICKED:
+        text = '🚫 The user stopped and blocked the bot'
+    elif old == ChatMemberStatus.KICKED and new == ChatMemberStatus.MEMBER:
+        text = '♻️ The user unblocked the bot'
+    else:
+        return
+
+    if tguser := await bot.db.tguser.get(user_id=update.from_user.id):
+        await bot.send_message(bot.cfg.admin_group_id, text,
+                               message_thread_id=tguser.thread_id)
+
+
+@log
+@handle_error
 async def mention_in_admin_group(msg: agtypes.Message, *args, **kwargs) -> None:
     """
     Show the admin menu on the bot's mention
@@ -425,3 +447,5 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.callback_query.register(admin_btn_handler, BtnInAdminGroup())
 
     dp.message_reaction.register(reaction_changed)
+
+    dp.my_chat_member.register(user_blocked_or_unblocked, PrivateChatFilter())
